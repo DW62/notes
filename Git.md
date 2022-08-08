@@ -88,7 +88,7 @@
 
 16. 完成Git安装向导
 
-![image-20220808222605466](https://raw.githubusercontent.com/DW62/ImgStg/master/image-20220808222605466.png)
+​	![image-20220808222605466](https://raw.githubusercontent.com/DW62/ImgStg/master/image-20220808222605466.png)
 
 ## Git 配置连接GitHub
 
@@ -124,6 +124,8 @@
 ![image-20220808224707478](https://raw.githubusercontent.com/DW62/ImgStg/master/image-20220808224707478.png)
 
 ![image-20220808224955478](https://raw.githubusercontent.com/DW62/ImgStg/master/image-20220808224955478.png)
+
+
 
 **验证是否成功**
 
