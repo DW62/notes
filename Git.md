@@ -100,14 +100,14 @@
 
 2. 通过命令创建git的用户名和邮箱作为表示标识
 
-   ```git
-   git config --global user.name "XXXX"  用户名标识  ---- 实际也可以填写您的github仓库的名称
-   git config --global user.email "xxxx@xxx.com"  邮箱标识  -------可以填写github仓库的邮箱
+   ```bash
+   git config --global user.name "XXXX"  			      用户名标识  ---- 实际也可以填写您的github仓库的名称
+   git config --global user.email "xxxx@xxx.com"  		邮箱标识  -------可以填写github仓库的邮箱
    ```
 
 3. 创建密钥
 
-   ```git
+   ```bash
    ssh-keygen -t rsa    -- 生成密钥命令
    ```
 
@@ -125,96 +125,156 @@
 
    ![image-20220808224955478](https://raw.githubusercontent.com/DW62/ImgStg/master/image-20220808224955478.png)
 
-
-
 **验证是否成功**
 
-```git
+```bash
 ssh -T git@github.com
 ```
 
 如果初次设置的话，输入yes 同意即可
 
-## GIt常用命令
-**创建文件夹**
-```git
-mkdir 文件夹名称
+## 常用命令
+
+### 创建文件夹
+
+```bash
+mkdir 文件夹名
 ```
-**进入文件夹**
-```git
+
+### 进入文件夹
+
+```bash
 cd 文件夹名称
 ```
-**克隆远程库**
-```git
+
+## GIt常用命令
+
+### 克隆远程库
+
+```bash
 git clone 你的地址
 ```
+### 文件上传到本地仓库
+
 **添加到暂存区**
-```git
- git add 文件名
- git add 文件名1 文件名2 ...
- git add .           添加当前目录所有文件到缓存区
+
+```bash
+ git   add 	文件名				    
+ git   add   文件名1 文件名2 ...
+ git   add   .           				#添加当前目录所有文件到缓存区
 ```
 **添加文件提交到本地库**
 
-```git
+```bash
 git commit  -m  "注释"
 ```
-**版本退回**
+### 版本回退
 
-```git
-查看版本
-git log
-git log --pretty=oneline (推荐)
-版本回退回退到上一个版本。commit-id每次提交git根据您的注释自动生成的加密字符串。只需要输入前六位。
-git reset --hard <commit_id> 
-```
-**本地仓库内容提交的远程库**
+1. 查看版本
 
-```git
-git  push -u orgin maser
+   ```bash
+   git log
+   git log --pretty=oneline      #(推荐)
+   ```
+
+2. 回退
+
+   ```bash
+   git reset --hard  版本号    # 只需要输入前六位。
+   ```
+
+   > 回到过去之后，想要再回到之前最新的版本的时候，需要使用指令查看历史操作
+   >
+   > ### 小结
+   >
+   > 1. 想要回到过去，必须要先得到commit id ,然后通过 git reset -- hard进行回退
+   > 2. 想要回到未来，需要使用git reflog 进行历史操作查看，得到最新的commit id
+   > 3. 在写回退指令的时候commit id 可以不用写全，git自动识别至少要写前4位
+
+   ```bash
+   git reflog   		#进行历史操作查看
+   ```
+
+### 跟新本地仓库和远程同步
+
+```bash
+git  pull
 ```
+
+### 本地仓库内容提交到远程库
+
+```bash
+git  push 
+```
+
+### 分支操作
+
+**查看分支**
+
+```bash
+git branch
+```
+
+**创建分支**
+
+```bash
+git branch 分支名
+```
+
+**切换分支**
+
+```bash
+git checkout 分支名
+```
+
+**删除分支**
+
+```bash
+git branch -d 分支名
+```
+
+删除分支需要退出当前分支
+
+**合并分支**
+
+```bash
+git merge 被合并的分支名
+```
+
+### 查看操作
 
 **查看文件状态**
 
-```git
-git status         -- 查看文件状态
-
-git diff 查看与上个版本的区别。如果本次有改动后（未提交）才可以看到变化
-
-git log 查看最近到最远的提交记录
-
-git reflog 查看命令历史，一般用来确认回到过去的那个版本
+```bash
+git status    
 ```
 
+**看与上个版本的区别**如果本次有改动后（未提交）才可以看到变化
 
-
-**分支相关命令**
-
-```git
-git branch 						如果不输入分支名，则查看当前所有分支
-
-git branch 分支名 				创建一个侧分支
-
-git checkout 分支名称 			克隆侧分支并切换到该侧分支上。
-
-git merge 侧分支名      		合并分支，合并操作前，先切换到主分支（master），再执行此命令
-
-git branch -d 分支名称    			删除分支，删除前工作区时干净的
+```bash
+git diff 
 ```
 
-**文件忽略**
+**查看记录**
+
+```bash
+git log  
+git log --pretty=oneline  
+```
+
+**查看命令历史**一般用来确认回到过去的那个版本
+
+```bash
+git reflog 
+```
+
+### 文件忽略
 
  项目文件夹内有一些文件不希望提交到仓库，那么可以使用git的配置文件将其忽略。 创建一个 .gitignore 文件放置在项目根目录下,该文件内可将某个文件或目录忽略，不再提示要求提交该文件了。
 
-**初始化仓库**
+### 删除仓库文件
 
 ```git
-git  init
-```
-
-**删除仓库文件**
-
-```git
-git rm "w"
+git rm "文件名"
 ```
 
