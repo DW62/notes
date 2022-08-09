@@ -88,7 +88,7 @@
 
 16. 完成Git安装向导
 
-​	![image-20220808222605466](https://raw.githubusercontent.com/DW62/ImgStg/master/image-20220808222605466.png)
+	 ![image-20220808222605466](https://raw.githubusercontent.com/DW62/ImgStg/master/image-20220808222605466.png)
 
 ## Git 配置连接GitHub
 
@@ -96,7 +96,7 @@
 
 1. 任意找一个文件夹鼠标右键选择git bash here弹出了git命令控制台！
 
-![image-20220808223225368](https://raw.githubusercontent.com/DW62/ImgStg/master/image-20220808223225368.png)
+   ![image-20220808223225368](https://raw.githubusercontent.com/DW62/ImgStg/master/image-20220808223225368.png)
 
 2. 通过命令创建git的用户名和邮箱作为表示标识
 
@@ -115,15 +115,15 @@
 
 4. 找到生成密钥的地址
 
-![image-20220808224424840](https://raw.githubusercontent.com/DW62/ImgStg/master/image-20220808224424840.png)
+   ![image-20220808224424840](https://raw.githubusercontent.com/DW62/ImgStg/master/image-20220808224424840.png)
 
 5. 找到GitHub进行公钥配置
 
    ![image-20220808224604038](https://raw.githubusercontent.com/DW62/ImgStg/master/image-20220808224604038.png)
 
-![image-20220808224707478](https://raw.githubusercontent.com/DW62/ImgStg/master/image-20220808224707478.png)
+   ![image-20220808224707478](https://raw.githubusercontent.com/DW62/ImgStg/master/image-20220808224707478.png)
 
-![image-20220808224955478](https://raw.githubusercontent.com/DW62/ImgStg/master/image-20220808224955478.png)
+   ![image-20220808224955478](https://raw.githubusercontent.com/DW62/ImgStg/master/image-20220808224955478.png)
 
 
 
@@ -136,33 +136,38 @@ ssh -T git@github.com
 如果初次设置的话，输入yes 同意即可
 
 ## GIt常用命令
-
+**创建文件夹**
+```git
+mkdir 文件夹名称
+```
+**进入文件夹**
+```git
+cd 文件夹名称
+```
 **克隆远程库**
-
 ```git
 git clone 你的地址
 ```
-
 **添加到暂存区**
-
-添加单个文件到暂存区
-
 ```git
-git add  文件名 
+ git add 文件名
+ git add 文件名1 文件名2 ...
+ git add .           添加当前目录所有文件到缓存区
 ```
-
-添加全部文件到暂存区
-
-```git
-git add .
-```
-
 **添加文件提交到本地库**
 
 ```git
 git commit  -m  "注释"
 ```
+**版本退回**
 
+```git
+查看版本
+git log
+git log --pretty=oneline (推荐)
+版本回退回退到上一个版本。commit-id每次提交git根据您的注释自动生成的加密字符串。只需要输入前六位。
+git reset --hard <commit_id> 
+```
 **本地仓库内容提交的远程库**
 
 ```git
@@ -181,12 +186,7 @@ git log 查看最近到最远的提交记录
 git reflog 查看命令历史，一般用来确认回到过去的那个版本
 ```
 
-**版本退回**
 
-```git
-git reset --hard <commit_id> 
-用来回退到上一个版本。commit-id每次提交git根据您的注释自动生成的加密字符串。只需要输入前六位。
-```
 
 **分支相关命令**
 
