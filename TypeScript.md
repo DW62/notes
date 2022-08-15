@@ -37,6 +37,8 @@ function sum(参数名1:参数1的类型,  参数名2: 参数2的类型): 函数
 
 ## TypeScript类型
 
+> TypeScript和JavaScript没有整数类型。
+
 ### number类型
 
 number类型可以是任意的数字。
@@ -94,9 +96,71 @@ s=<string>a
 
 通过用来给函数设置void类型的返回值，函数返回值设置void类型也可以返回`null`
 
+**Null 和 Undefined**
+
+null:
+
+* 在 JavaScript 中 null 表示 "什么都没有"。
+
+* null是一个只有一个值的特殊类型。表示一个空对象引用。
+
+* 用 typeof 检测 null 返回是 object。
+
+undefined
+
+* 在 JavaScript 中, undefined 是一个没有设置值的变量。
+
+* typeof 一个没有值的变量会返回 undefined。
+
+**Null 和 Undefined 是其他任何类型（包括 void）的子类型，可以赋值给其它类型**，如数字类型，此时，赋值后的类型会变成 null 或 undefined。而在TypeScript中启用严格的空校验（--strictNullChecks）特性，就可以使得null 和 undefined 只能被赋值给 void 或本身对应的类型，示例代码如下：
+
+```typescript
+// 启用 --strictNullChecks
+let x: number;
+x = 1; // 编译正确
+x = undefined;    // 编译错误
+x = null;    // 编译错误
+```
+
+上面的例子中变量 x 只能是数字类型。如果一个类型可能出现 null 或 undefined， 可以用` |` 来支持多种类型，示例代码如下：
+
+```typescript
+// 启用 --strictNullChecks
+let x: number | null | undefined;
+x = 1; // 编译正确
+x = undefined;    // 编译正确
+x = null;    // 编译正确
+```
+
 ### never 没有值类型
 
 通常用在方法抛出异常时设置的返回值类型
+
+**never 是其它类型（包括 null 和 undefined）的子类型，代表从不会出现的值**。这意味着声明为 never 类型的变量只能被 never 类型所赋值，在函数中它通常表现为抛出异常或无法执行到终止点（例如无限循环），示例代码如下：
+
+```typescript
+let x: never;
+let y: number;
+
+// 编译错误，数字类型不能转为 never 类型
+x = 123;
+
+// 运行正确，never 类型可以赋值给 never类型
+x = (()=>{ throw new Error('exception')})();
+
+// 运行正确，never 类型可以赋值给 数字类型
+y = (()=>{ throw new Error('exception')})();
+
+// 返回值为 never 的函数可以是抛出异常的情况
+function error(message: string): never {
+    throw new Error(message);
+}
+
+// 返回值为 never 的函数可以是无法被执行到的终止点的情况
+function loop(): never {
+    while (true) {}
+}
+```
 
 ### object类型
 
@@ -141,114 +205,72 @@ a={name: "张三", age:18, address:"地球"};//可以成功赋值
 
 * 语法4：定义函数形式的使用`let 变量名=（形参：类型，形参：类型，..）=>返回值类型`
 
-**TS类型：**
-
-| 数据类型   | 关键字    | 描述                                                         |
-| :--------- | :-------- | :----------------------------------------------------------- |
-| 任意类型   | any       | 声明为 any 的变量可以赋予任意类型的值。                      |
-| 数字类型   | number    | 双精度 64 位浮点值。它可以用来表示整数和分数。               |
-| 字符串类型 | string    | 一个字符系列，使用单引号（**'**）或双引号（**"**）来表示字符串类型。反引号（**`**）来定义多行文本和内嵌表达式。 |
-| 布尔类型   | boolean   | 表示逻辑值：true 和 false。                                  |
-| 数组类型   | 无        | 声明变量为数组。                                             |
-| 元组       | 无        | 元组类型用来表示已知元素数量和类型的数组，各元素的类型不必相同，对应位置的类型需要相同。 |
-| 枚举       | enum      | 枚举类型用于定义数值集合。                                   |
-| void       | void      | 用于标识方法返回值的类型，表示该方法没有返回值。             |
-| null       | null      | 表示对象值缺失。                                             |
-| undefined  | undefined | 用于初始化变量为一个未定义的值                               |
-| never      | never     | never 是其它类型（包括 null 和 undefined）的子类型，代表从不会出现的值。 |
-| 字面量     | 本身      | ` let n:10` 这里的10就是字面量(可以是任意数字和字符串) 设置字面量类型，则变量的值就是字面量的值 |
-| 未知类型   | unknown   | 在不清楚类型的时候使用。unknown类型的值不能赋值给其他类型。  |
-|            |           |                                                              |
-
-> TypeScript和JavaScript没有整数类型。
-
-**Any 类型**
-
-任意值是 TypeScript 针对编程时类型不明确的变量使用的一种数据类型，它常用于以下三种情况。
-
-1. 变量的值会动态改变时，比如来自用户的输入，任意值类型可以让这些变量跳过编译阶段的类型检查，示例代码如下：
-
 ```typescript
-let x: any = 1;    // 数字类型
-x = 'I am who I am';    // 字符串类型
-x = false;    // 布尔类型
-```
-
-2. 改写现有代码时，任意值允许在编译时可选择地包含或移除类型检查，示例代码如下：
-
-```typescript
-let x: any = 4;
-x.ifItExists();    // 正确，ifItExists方法在运行时可能存在，但这里并不会检查
-x.toFixed();    // 正确
-```
-
-3. 定义存储各种类型数据的数组时，示例代码如下：
-
-```typescript
-let arrayList: any[] = [1, false, 'fine'];
-arrayList[1] = 100;
-```
-
-**Null 和 Undefined**
-
-null:
-
-* 在 JavaScript 中 null 表示 "什么都没有"。
-
-* null是一个只有一个值的特殊类型。表示一个空对象引用。
-
-* 用 typeof 检测 null 返回是 object。
-
-undefined
-
-* 在 JavaScript 中, undefined 是一个没有设置值的变量。
-
-* typeof 一个没有值的变量会返回 undefined。
-
-**Null 和 Undefined 是其他任何类型（包括 void）的子类型，可以赋值给其它类型**，如数字类型，此时，赋值后的类型会变成 null 或 undefined。而在TypeScript中启用严格的空校验（--strictNullChecks）特性，就可以使得null 和 undefined 只能被赋值给 void 或本身对应的类型，示例代码如下：
-
-```typescript
-// 启用 --strictNullChecks
-let x: number;
-x = 1; // 编译正确
-x = undefined;    // 编译错误
-x = null;    // 编译错误
-```
-
-上面的例子中变量 x 只能是数字类型。如果一个类型可能出现 null 或 undefined， 可以用` |` 来支持多种类型，示例代码如下：
-
-```typescript
-// 启用 --strictNullChecks
-let x: number | null | undefined;
-x = 1; // 编译正确
-x = undefined;    // 编译正确
-x = null;    // 编译正确
-```
-
-**never 类型**
-
-**never 是其它类型（包括 null 和 undefined）的子类型，代表从不会出现的值**。这意味着声明为 never 类型的变量只能被 never 类型所赋值，在函数中它通常表现为抛出异常或无法执行到终止点（例如无限循环），示例代码如下：
-
-```typescript
-let x: never;
-let y: number;
-
-// 编译错误，数字类型不能转为 never 类型
-x = 123;
-
-// 运行正确，never 类型可以赋值给 never类型
-x = (()=>{ throw new Error('exception')})();
-
-// 运行正确，never 类型可以赋值给 数字类型
-y = (()=>{ throw new Error('exception')})();
-
-// 返回值为 never 的函数可以是抛出异常的情况
-function error(message: string): never {
-    throw new Error(message);
-}
-
-// 返回值为 never 的函数可以是无法被执行到的终止点的情况
-function loop(): never {
-    while (true) {}
+let a: (a:number, b:number)=>number
+a=function (n1,n2):number{
+    return 1;
 }
 ```
+
+### array 数组类型
+
+**数组类型定义：**
+
+* let 变量名：数组数据类型[];
+* let 变量名：Array<数组数据类型>
+
+### 元组类型
+
+> 元组实际上就是固定长度的数组   
+
+语法：`let 变量名：[类型，类型]`
+
+元组类型数据，数据长度必须和定义的一样不能多，也不能少，并且元组类型数据`[ ]`中的类型可以是多种不同的，也可以是相同类型。
+
+### enum 枚举类型
+
+**枚举的定义：**
+
+```typescript
+enum 枚举类的名字{
+    枚举元素1=枚举元素1的值，
+    枚举元素2=枚举元素2的值，
+}
+```
+
+**枚举的应用：**
+
+```typescript
+//定义枚举
+enum Gender{
+    Male=0,
+    Female=1
+}
+//应该枚举
+let i：{name：string, gender: Gender}
+i={
+    name:"张三",
+    gender: Gender.Male
+}
+```
+
+### `|`和`&`的使用
+
+**`|`:**  可以用了连接类型，表示或的意思。即满足其中一个类型即可。
+
+**`&`:**  通常的用法.	`let 变量名：{属性名：类型} & {属性名：类型}`例如` let i: {name: string} & {age: number}`表示`变量 i 必须具备string类型的number属性同时还要有number类型的age 属性`
+
+### 类型别名(自定义类型)
+
+**语法：** 可以通过`type`关键字来给类型添加别名或者自定义一个类型
+
+```typescript
+//自定义一个类型
+type myType=1|2|3;
+
+//定义变量并且给变量赋予自定义的类型
+let i: myTYpe  //此时i的类型实际上为  1|2|3  
+```
+
+
+
