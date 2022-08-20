@@ -136,6 +136,8 @@ export class AppComponent {
 
 ### 组件
 
+#### 组件创建
+
 组件是拥有模板的控制器类，主要处理页面上的应用程序和逻辑的视图。组件可以拥有独立的样式。
 注册组件，使用@Component注释，可以将应用程序拆分为更小的部分。
 
@@ -148,7 +150,112 @@ export class AppComponent {
 * templateUrl：组件模板文件的URL
 * styleUrls：组件的样式文件
 
+#### 组件生命周期
 
+Angular会按以下顺序执行钩子方法
+
+| 钩子方法                | 用途                                                         | 时机                                                         |
+| :---------------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| ngOnChanges()           | 当`Angular`设置或重新设置数组绑定的输入属性时相应。该方法接受当前和上一属性值的`SimpleChanges`对象注意，这发生的非常频繁，所以你在这里执行的任何操作都会显著影响性能。 | 在`ngOnInit()`之前以及所绑定的一个或者多个输入属性的值发生变化时都会调用。注意，如果你的组件没有输入，或者你使用它时没有提供任何输入，那么框架就不会调用`ngOnChanges()` |
+| ngOnInit()              | 在`Angular`第一次显示数据绑定和设置指令/组件的输入属性之后，初始化指令/组件/ | 在第一轮`ngOnChanges()`完成之后调用，只调用一次。            |
+| ngDoCheck()             | 检测，并在发生`Angular`无法或不愿意自己检测的变化时做出反应  | 紧跟在每一次执行变更检测时的`ngOnChanges()`和首次执行变更检测时的`ngOnInit()`后调用 |
+| ngAfterContentInit()    | 当`Angular`把外部内容投影进组件视图或者指令所在的视图之后调用 | 第一次`ngDoCheck()`之后调用，只调用一次                      |
+| ngAfterContentChecked() | 每当`Angular`检查完被投影到组件或指令中的内容之后调用        | `ngAfterContentInit()`和每次`ngDoCheck ()`之后调用           |
+| ngAfterViewInit()       | 当`Angular`初始化完组件视图及其子视图或包该指令的视图之后调用 | 第一次`ngAfterContentChecked()`之后调用，只调用一次          |
+| ngAfterContentCheced()  | 每当`Angular`做完组件视图和子视图或包含该指令的视图的变更检测之后调用 | `ngAfterViewInit()`和每次`ngAfterContentChecked()`之后调用   |
+| ngOnDestroy()           | 每当`Angular`每次销毁指令/组件之前调用并清扫。在这儿反订阅可观察对象和分离事件处理器，以防止内存泄漏 | 在`Angular`销毁指令或组件之前立即调用                        |
+
+**重点生命周期：**`ngOnInit()`、`ngOnChanges()`、`ngOnDestroy()`
+
+#### 组件交互
+
+**父组件给子组件传值**：`@Input`：父组件通过`@Input`给子组件绑定属性设置输入类数据
+
+示例：
+
+父组件
+
+```jsx
+//在组件间的ts文件中将要传递的值声明出来
+export class HomeComponent implements OnInit {
+  title:string='张三'   //要向子组件中传递的值为title
+  constructor() { }
+ 
+  ngOnInit(): void {
+  }
+}
+
+//在父组件的html中找到要传递的子组件
+<app-title [titles]="title"></app-title>    //【titles】表示子组件接收到值后的变量名         title表示父组件传递的值
+```
+
+子组件
+
+```jsx
+//先引入Input
+import { Component, OnInit, Input } from '@angular/core';
+
+//接收符组件传来的值
+export class TitleComponent implements OnInit {
+
+  @Input()
+   titles!: string   //titles为符组件传递的值的名字
+
+    .....
+}
+
+//在页面中使用符组件传递的值
+<p>title 组件 {{titles}}</p>
+```
+
+**子组件给父组件传值：**`@Output`    用法：父组件给子组件传递一个事件，子组件通过`@Output`弹射触发事件然后将值给父组件
+
+子组件
+
+```jsx
+//现在子组件中引入 Output 和EventEmitter
+import { Component, OnInit ,Output ,EventEmitter} from '@angular/core';
+
+
+export class TitleComponent implements OnInit {
+//传教一个ventEmitter对象 然后使用@Output() 将对象弹射出去
+ @Output() addList=new EventEmitter()
+    //给子组件添加一个方法，用来给对象添加值
+ addBtnFun(){
+  console.log(1);
+  this.addList.emit('Vue')  //给对象添加值
+ }
+    
+    ...
+}
+    
+    
+    //页面添加触发addBtnFun方法的事件
+    <button (click)="addBtnFun()">子组件向父组件传值</button>
+```
+
+父组件
+
+```jsx
+//在父组件中找到传递值的子组件
+//通过设置方法来获取子组件传递的值    （addList)表示子组件弹射过来的对象   addListFun($event)" 为方法
+<app-title (addList)="addListFun($event)"></app-title>  
+
+//展示数据
+<p *ngFor="let item of list"> {{item}}</p>
+
+//在ts文件中添加上对应的方法
+export class HomeComponent implements OnInit {
+
+  list:Array<string> =['Angular','React']
+  addListFun(str:string){  //参数表示子组件传递的值
+    this.list?.push(str)   //将子组件传递的值添加到lis中
+  }
+...
+}
+```
+
+>  父组件还可以通过`@ViewChild('自己声明的子组件的名字')` 来获取子组件的示例，从而获取子组件数据。不过很少用
 
 ### 模板
 
@@ -393,5 +500,361 @@ export class NameEditorComponent{
 updateName(){
     this.name.setValue('张三')；
 }
+```
+
+#### 表单控件的分组
+
+表单中通常会包含几个相互关联的控件。响应式表单提供了两种把多个相关控件分组到同一个输入表单中的方法
+
+要将表单组件添加到此组中需要：
+
+1. 创建一个`FormGroup`实例。
+2. 把这个`FormGroup`模型关联到视图。
+3. 保存表单数据。
+
+创建一个`FormGroup`实例
+
+在组件类中创建一个名叫`loginForm`的属性，并设置为`FormGroup`的一个新实例。要初始化这个`FormGroup`，请为构造函数提供一个由控件组成的对象，对象中每一个名字都要和表单控件的名字一一对应
+
+```jsx
+import { Component } form '@angular/core';
+import { FormGroup , FormControl } from '@angular/forms';
+
+@Component({
+    selector: 'app-profile-editor',
+    templateUrl: './profilr-editor.component.html',
+    styleUrls: ['./profile-editor.component.css']
+})
+export class ProfileEditorComponent {
+    loginForm=new FormGroup({
+        userName: new FormGroup(' '),
+        password: new FormControl(' '),
+    });
+}
+
+//模板渲染
+<from [formGroup]="loginForm">
+	<label>账号：<inpult  type="text"  formControlName="userName"/></label>
+       <label>密码：<inpult  type="text"  formControlName="password"/></label>
+</from>
+```
+
+#### 表单验证
+
+表单元素添加`required`关键字表示必填，通过绑定`ngModel`的引用可以拿到当前组件的信息，通过引用获取到验证的信息.
+
+```jsx
+export class AppComponent{
+    formData={
+        name: ' ',
+        password: ' '
+    };
+    
+    subBtnFun(object){
+        console.log(object)
+    }
+}
+
+<form action="">
+	账号：<input required  #nameInp="ngModel"  type="text"  [(ngModel)]="formData.name"  name="uaserName"/>
+      <br/>
+      <span>{{ nameInp.valid}}</span>
+       密码：<input required  #pasInp="ngModel"  type="text"  [(ngModel)]="formData.password"  name="password"/>
+      <br/>
+      <span>{{ pasInp.valid}}</span>
+     <button (click)="subBtnFun(nameInp)">提交</button>
+</form>
+```
+
+我们还可以通过`ngModel`跟踪修改状态与有效性验证，它使用了三个css类来更新控件，以便反映当前的状态。
+
+| 状态             | 为true时的类 | 为false时的类 |
+| ---------------- | ------------ | ------------- |
+| 控件已经被访问过 | ng-touched   | ng-untouched  |
+| 控件值已经变化   | ng-dirty     | ng-pristine   |
+| 控件值是有效的   | ng-valid     | ng-invalid    |
+
+**自定义表单验证：**
+
+先引入表单的一些内置依赖
+
+```jsx
+import { FormGroup , FormBuilder , Validators}  form '@angular/forms';
+
+//构造函数注入FormBuilder
+constructor(private fb:FormBuilder){  }
+
+//错误提醒数据
+formErrors={
+    'title': ' ',
+    'content': ' '
+};
+
+
+//在组件类的初始化函数里对表单的元素的校验进行定义，并调用表单的valueChanges方法，检测表单输入的变化
+ngOnInit():void{
+    this.taskInfo.isComplete=1;
+    this.tasksForm=this.fb.group({
+    	userName: [' ', [Validators.required, Validators.maxLength(18), Validators.minLength(6)]],
+            password: [' ', [this.passwordVal]],
+            phone: [' ' ,[Validators.required, this.phoneVal], ]    
+	});
+
+phoneVal(phone: FormControl): object {
+    const value=phone.value || ' ' ;
+    if(!value)  return {desc: '请输入手机号'}
+    const valid= /[0-9]{11}/.test(value);
+    return valid ? { } : {desc: '联系电话必须是11位数'}
+   }
+passWordVal(password:FormControl):object{
+    const value=password.value || ' ';
+    const valid=value.match(/^(?![0-9]+$)(?![a-zA-Z]+$)[0-9A-Za-z]{6,20}$/);
+    return valid ? { } : {passwordValidator : {desc: '密码至少要包含数字和英文长度6-20'}}
+  }
+}
+```
+
+#### 管道
+
+管道的作用就是传输。不同的管道具有不同的作用(其实就是数据处理)
+
+angular中自带pipe函数
+
+| 管道          | 功能                                                      |
+| ------------- | --------------------------------------------------------- |
+| DatePipe      | 日期管道，格式化                                          |
+| JsonPipe      | 将输入数据对象经过Json.stringfy()方法转换后输出对象字符串 |
+| UppercasePipe | 将文本所有小写字母转换为大写字母                          |
+| LowercasePipe | 将文本所有大写字母转换为小写字母                          |
+| DecimalPipe   | 将数值按照特定的格式显示文本                              |
+| CurrentcyPipe | 将数值进行货币格式化处理                                  |
+| SlicePipe     | 将数组或者字符串裁剪成新的子集                            |
+| PercentPipe   | 将数值转换为百分比格式                                    |
+
+Pipe用法：
+
+* {{输入数据 | 管道(只取Pipe前面的内容并且转为小写) ：管道参数}}  其中`|`是管道操作符
+* 链式管道{{ 输入数据 | date | uppercase }}
+* 管道流通方向自左向右，逐层执行
+
+**示例：**
+
+```jsx
+//使用管道转换时间
+<p>{{ dateStr | date : 'yyyy-MM-dd HH:mm:ss'}}</p>  //将时间字符串转换为yyyy-MM-dd HH:mm:ss 格式
+```
+
+可以使用命令`ng g p 管道名字`来创建管道，通过命令创建的管道会自动在`app.module.ts`中引用，手动传教的需要自己引用到`app.module.ts`中
+
+```typescript
+import { Pipe, PipeTransform } from '@angular/core';
+
+@Pipe({
+  name: 'test'        //test表示通过命令生成管道时的管道名字
+})
+export class TestPipe implements PipeTransform {
+
+  transform(value: unknown, ...args: unknown[]): unknown {
+      //value表示管道接收到的数据 ，返回的是自己经过处理的结果
+    return  '>>>'+value+'>>>';
+  }
+
+}
+```
+
+### 服务
+
+>  angular中，把从组件内抽离出来的代码叫服务，服务的本质就是函数
+
+官方认为组件不应该直接获取或保存数据，它们应该聚焦于展示数据，而把数据访问的职责委托给某个服务。而
+服务就充当着数据访问，逻辑处理的功能。把组件和服务区分开,以提高模块性和复用性。通过把组件中和视图有
+关的功能与其他类型的处理分离开，可以让组件类更加精简、高效。
+
+使用命令`ng g S xxx`创建一个服务， 通过`@Injectable()`装饰器标识服务。
+
+```jsx
+//导入Injectable装饰器
+import { Injectable } from '@angular/core'；
+//使用Injectable装饰器声明服务
+@Injectable({
+    //作用域设置，'root' 表示默认注入，注入到AppModule    还可以是null表示不设置区域   还可以是某个模块的名字(一般是懒加载模式)
+    providedIn: 'root',
+})
+
+export class TestService{
+    
+}
+```
+
+组件中如何使用服务呢，必须将服务依赖注入系统、组件或者模块,才能够使用服务。我们可以用**注册提供商**和**根**
+**注入器**实现。
+该服务本身是CLI创建的一个类，并且加上了`@Injectable()`装饰器。默认情况下，该装饰器是用`providedIn`属性进行配置的，它会为该服务创建一个提供商。
+
+**依赖注入:** 服务创建完成后需要手动在`中进行导入`
+
+1. 在`app.module.ts`中进行导入
+
+```typescript
+import {服务名} from '服务地址'
+
+providers: [服务名],
+```
+
+2. 在要使用该服务的组件中进行导入
+
+```typescript
+iimport {服务名} from '服务地址'
+
+//在组件的构造函数中进行声明服务
+ constructor(private 服务使用时的变量名: 在当前组件中注入的服务名) { }
+//然后就可以在需要使用服务的地方直接使用服务变量名来使用
+```
+
+### 路由
+
+路由就是连接组件的筋络，它也是树形结构的.有了它，就可以在angular中实现路径的导航模式
+可以把路由看成是一组规则,它决定 了url的变化对应着哪一种状态， 具体表现就是不同视图的切换，在angular中，路由是非常重要的组成部分,组件的实例化与销毁,模块的加载组件的某些生命周期钩子的发起，都是与它有关
+
+#### 路由基本使用
+**路由器**是一个调度中心，它是一 套规则的列表能够查询当前URL对应的规则，并呈现出相应的视图.
+**路由**是列表里面的一个规则，即路由定义，它有很多功能字段:
+●path字段,表示该路由中的URL路径部分
+●Component字段，表示与该路由相关联的组件
+每个带路由的Angular应用都有一个路由器服务的单例对象，通过 路由定义的列表进行配置后使用。
+
+路由配置步骤：
+
+1. 在`app-routing.module.ts`文件中
+
+```typescript
+import { NgModule } from '@angular/core';
+import { RouterModule, Routes } from '@angular/router';
+
+//引入组件
+import {HomeComponent } from './home/home.component'
+import {HelloComponent } from './hello/hello.component'
+//路由配置
+const routes: Routes = [
+    {
+    path:'',   //为空表示默认打开
+    component:HomeComponent
+  },
+  {
+    path:'hello', //Url对应
+    component:HelloComponent  ///与该路由相关联的组件
+  },
+    {
+    path:'**',  //通配匹配(如果不管输入什么都会打开)，这个必须要放最下面
+    component:HomeComponent
+  }
+];
+
+@NgModule({
+  imports: [RouterModule.forRoot(routes)],
+  exports: [RouterModule]
+})
+```
+
+2. 在页面上进行渲染路由
+
+```html
+<!-- 设置路由导航 -->
+<a [routerLink]="[ '/home' ]">首页</a>    |      <a [routerLink]="[ '/hello' ]">hello页</a>
+<!-- 路由渲染位置 -->
+<router-outlet></router-outlet>
+```
+
+#### 路由嵌套
+
+**路由设置：**
+
+```jsx
+ {
+    path:'hello',
+    component:HelloComponent,
+    children:[
+      {path:'title' ,component:TitleComponent}  //嵌套的路由
+    ]
+  },
+```
+
+**页面设置：**  在hello里面嵌套路由，所以修改hello页面
+
+```html
+<!-- 设置路由导航   必须把父级路由地址也加上-->
+<a [routerLink]="[ '/hello/title' ]">的组件</a>
+<!-- 路由渲染位置 -->
+<router-outlet></router-outlet>
+```
+
+#### 路由传参和获取
+
+1. `query`方式：在a标签上添加一个参数`queryParms`,并通过`this.routerfo.snapshot.queryParams`获取参数 
+
+```html
+<a [routerLink]="[ '/home' ]" [queryParams]="{'id':1,'name':'张三'}">首页</a>  
+```
+
+效果：在路由地址后面使用`？`分割开参数，参数与参数直接使用`&`连接。
+
+例如：`http://localhost:4200/home?id=1&name=张三`
+
+参数的获取：**路由地址对应的组件的ts文件中**
+
+```typescript
+//引入ActivatedRoute 
+import { ActivatedRoute } from '@angular/router';
+
+//在构造方法中声明一个ActivatedRoute 类型的参数
+ constructor(private routerInfo:ActivatedRoute){
+    
+  }
+
+//在需要获取参数的地方直接根据声明的变量来获取
+  //初始化生命周期方法
+  ngOnInit(): void {
+   //输出路由参数 对象
+   console.log(this.routerInfo.snapshot.queryParams);
+	//根据参数名子获取参数值
+ 	console.log(this.routerInfo.snapshot.queryParams['前面的参数名']);
+  }
+```
+
+2. `params`方式：修改路由配置文件`path`，路由导航a标签`routerLink`后面数组的第二个参数为传递的值，并且通过`subscribe`获取传递的值
+
+```jsx
+  {
+    path:'hello/:id/:name',   //id和name就是要传递的参数名称
+    component:HelloComponent
+  },
+      
+     //2和zhangsan表示传递的具体值   值顺序必须和上面一致
+<a [routerLink]="[ '/hello','2','zhangsan']">hello页</a> |
+```
+
+效果：在路由地址后面使用`/`分割开参数，参数与参数也使用`/`连接。
+
+例如：`http://localhost:4200/hello/2/zhangsan`
+
+参数的获取：**路由地址对应的组件的ts文件中**
+
+```typescript
+//引入ActivatedRoute, Params 
+import { ActivatedRoute, Params } from '@angular/router';
+
+//在构造方法中声明一个ActivatedRoute 类型的参数
+ constructor(private routerInfo:ActivatedRoute){
+    
+  }
+
+
+//在需要获取参数的地方直接根据声明的变量来获取
+  //初始化生命周期方法
+  ngOnInit(): void {
+  		this.routerInfo.params.subscribe((params:Params)=>{
+        	console.log(params)  //输出参数对象
+       	      console.log(params['id'])  //根据参数名字获取参数
+        })
+  }
 ```
 
