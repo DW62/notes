@@ -6,7 +6,7 @@
 
 ## Global Speed: 视频速度控制
 
-可以控制浏览器视频播放速度
+可以控制浏览器视频播放速度。
 
 ![image-20220205172745800](https://gitee.com/dwOrigin/imgck/raw/master/image/image-20220205172745800.png)
 
