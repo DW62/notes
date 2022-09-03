@@ -26,8 +26,6 @@
 https://jrebel.qekang.com/你生成的ID
 ```
 
-
-
 ## Codota
 
 IDEA的自动补全功能已经很强大了，但是这个插件的自动补全功能更加强大，这是一个基于AI技术，学习了大量的开源项目，智能提示更加的可靠
@@ -75,8 +73,6 @@ IDEA的自动补全功能已经很强大了，但是这个插件的自动补全�
 遇到冲突的依赖，可以点击右键，跳到源文件或者直接选择`Exclude` 排除这个依赖
 
 ![图片](https://mmbiz.qpic.cn/sz_mmbiz_png/6D5fS3V8mLxBOLNLnHEVtG2Q3pMLNTVYIW2yueqvJWwA22sF0UpaJs13rtDykmFnrLh5e30Mz8icViaU1LwdjA7A/640?wx_fmt=png&tp=webp&wxfrom=5&wx_lazy=1&wx_co=1)
-
-
 
 ## Alibaba Java Coding Guidelines（代码规范提示）
 
