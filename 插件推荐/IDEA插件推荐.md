@@ -8,9 +8,9 @@
 
 **插件下载地址：**https://plugins.jetbrains.com/plugin/12132-leetcode-editor
 
+## JRebel and XRebel（热部署插件）
 
-
-## Jrebel（热部署插件）
+![image-20220901210952897](https://raw.githubusercontent.com/DW62/ImgStg/master/image-20220901210952897.png)
 
 这个插件真的是强烈推荐，有时候改一点点代码都要重启才能生效，很浪费时间。
 
@@ -28,8 +28,6 @@ https://jrebel.qekang.com/你生成的ID
 
 
 
-
-
 ## Codota
 
 IDEA的自动补全功能已经很强大了，但是这个插件的自动补全功能更加强大，这是一个基于AI技术，学习了大量的开源项目，智能提示更加的可靠
@@ -42,14 +40,6 @@ IDEA的自动补全功能已经很强大了，但是这个插件的自动补全�
 
 还有个更强的功能是，它可以从github、stackoverflow上快速的找到你想要的相关代码
 
-
-
-
-
-
-
-
-
 ## Translation（翻译插件）
 
 这是翻译插件，阅读源码有不认识的英文，或者编写变量时，不知道英文怎么写的时候可以直接进行翻译
@@ -57,8 +47,6 @@ IDEA的自动补全功能已经很强大了，但是这个插件的自动补全�
 在菜单栏上也可以直接进行翻译，不用再去打开一些在线翻译网站了
 
 **插件下载地址：**https://plugins.jetbrains.com/plugin/8579-translation
-
-
 
 ## Key Promoter X（快捷键提示插件）
 
@@ -120,10 +108,6 @@ IDEA的自动补全功能已经很强大了，但是这个插件的自动补全�
 
 **插件下载地址：**https://plugins.jetbrains.com/plugin/7654-gsonformat
 
-
-
-
-
 ## JavaDoc
 
 **这是一个快速生成文档注释的插件**
@@ -135,8 +119,6 @@ windows上可以通过`alt + insert` 快捷键，mac是`control+回车`
 可以快速生成注释模板
 
 ![图片](https://mmbiz.qpic.cn/sz_mmbiz_gif/6D5fS3V8mLxBOLNLnHEVtG2Q3pMLNTVYPueuPlb0wXmsZbj92KaQGjTPMIL3yKR4hWgWmMaia4eoaFo7P8aYlVg/640?wx_fmt=gif&tp=webp&wxfrom=5&wx_lazy=1&wx_co=1)
-
-
 
 ## ignore
 
@@ -182,8 +164,6 @@ windows上可以通过`alt + insert` 快捷键，mac是`control+回车`
 
 按左右键，是选择开头和结尾
 
-
-
 ## GenerateAllSetter
 
 **插件下载地址：**https://plugins.jetbrains.com/plugin/9360-generateallsetter/versions
@@ -196,8 +176,6 @@ windows上可以通过`alt + insert` 快捷键，mac是`control+回车`
 
 ![图片](https://mmbiz.qpic.cn/sz_mmbiz_png/6D5fS3V8mLxBOLNLnHEVtG2Q3pMLNTVYicXJHXEqLsiay4mW8mTfLxB7wCPyhDiaCeKzWzMKJM0X2PFvob6RSSicgA/640?wx_fmt=png&tp=webp&wxfrom=5&wx_lazy=1&wx_co=1)
 
-
-
 ## Statistic
 
 一款分析项目代码的工具，按照扩展名列出清单，统计代码数量和行数
@@ -207,8 +185,6 @@ windows上可以通过`alt + insert` 快捷键，mac是`control+回车`
 **插件下载地址：**https://plugins.jetbrains.com/plugin/4509-statistic
 
 ![图片](https://mmbiz.qpic.cn/sz_mmbiz_png/6D5fS3V8mLxBOLNLnHEVtG2Q3pMLNTVYtcM4ib7ibGgUNVNkUje1jepByGfgXZic591jQvNfXBmeTVkghkcPEgmAQ/640?wx_fmt=png&tp=webp&wxfrom=5&wx_lazy=1&wx_co=1)
-
-
 
 ## MyBatis X
 
