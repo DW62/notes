@@ -1,5 +1,7 @@
 # VSCode插件
 
+## 通用插件
+
 `Auto Rename Tag`插件，用来修改前面标签自动更改后面标签
 
 ![image-20220830172214956](https://raw.githubusercontent.com/DW62/ImgStg/master/202208301722137.png)
