@@ -60,48 +60,61 @@ export default instance
 ```typescript
 //封装axios请求
 //导入axios配置
+import axios from 'axios'
 import instance from '../config/axiosConfig'
 
 //定义一个configType类型
-type configType={
-    method:string
-    url:string
-    [x:string]:any
+type configType = {
+    method: string
+    url: string
+    [x: string]: any
 }
-const http={
-    get(url:string,params?:any){
-        const config:configType={
-            method:'get',
-            url:url,
+const http = {
+    get(url: string, params?: any) {
+        const config: configType = {
+            method: 'get',
+            url: url,
         }
         //如果参数存在则将参数赋值
-        if(params) config.params=params
+        if (params) config.params = params
         return instance(config)
     },
-    post(url:string,params?:any){
-        const config:configType={
-            method:'post',
-            url:url
+    //后端通过@RequestBody将值封装到对象中获取值
+    post(url: string, params?: any) {
+        const config: configType = {
+            method: 'post',
+            url: url,
         }
-        if(params) config.data=params
+        if (params) config.data = params
         return instance(config)
     },
-    put(url:string,params?:any){
-        const config:configType={
-            method:'put',
-            url:url,
+    // 后端可以通过@RequestParam("")来获取值
+    postFrom(url: string, params?: any) {
+        return axios({
+            method: 'post',
+            url: url,
+            headers: {
+                'content-type': 'multipart/form-data'
+            },
+            data: params
+        })
+    },
+    put(url: string, params: any) {
+        const config: configType = {
+            method: 'put',
+            url: url,
         }
         //如果参数存在则将参数赋值
-        if(params) config.params=params
+        if (params) config.params = params
         return instance(config)
     },
-    delete(url:string,params?:any){
-        const config:configType={
-            method:'delete',
-            url:url,
+    delete(url: string, params: any) {
+        const config: configType = {
+            method: 'delete',
+            url: url,
         }
         //如果参数存在则将参数赋值
-        if(params) config.params=params
+        if (params) config.params = params
         return instance(config)
     },
 }
