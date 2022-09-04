@@ -128,12 +128,14 @@ public class SwaggerConfig {
         required：参数是否必须传
         paramType：参数放在哪个地方
             · header --> 请求参数的获取：@RequestHeader
-            · query --> 请求参数的获取：@RequestParam
-            · path（用于restful接口）--> 请求参数的获取：@PathVariable
-            · body（不常用）
-            · form（不常用）    
+            · query --> get请求的参数拼接：@RequestParam
+            · path（用于restful接口）-->  用于restful请求参数的获取 可用于 @PathVariable
+            · body（不常用） 放在post 请求体 可用于@RequestBody
+            · form（不常用）  表单提交的形式
+            . 
         dataType：参数类型，默认String，其它值dataType="Integer"       
         defaultValue：参数的默认值
+        如果传的参数为数组，可以使用 allowMultiple = true 标注参数可以为多个
 
 @ApiResponses：用在请求的方法上，表示一组响应
     @ApiResponse：用在@ApiResponses中，一般用于表达一个错误的响应信息
