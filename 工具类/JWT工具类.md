@@ -5,7 +5,7 @@
  * JWT工具类
  */
 public class JWTUtil {
-    //设置保存时长
+    //设置s时长
     private static final long EXPIRE=60*1000;
     //设置加密密钥
     private static final String ENCRYPTIONKEY="admin";

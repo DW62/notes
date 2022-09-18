@@ -278,12 +278,44 @@ public class SecurityConfig  {
 
 **引入jwt依赖**
 
+JDK8引入依赖
+
 ```xml
 <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt</artifactId>
             <version>0.9.0</version>
 </dependency>
+```
+
+JDK8以上版本引入依赖
+
+```xml
+<dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt</artifactId>
+            <version>0.9.0</version>
+        </dependency>
+        <dependency>
+            <groupId>javax.xml.bind</groupId>
+            <artifactId>jaxb-api</artifactId>
+            <version>2.3.0</version>
+        </dependency>
+        <dependency>
+            <groupId>com.sun.xml.bind</groupId>
+            <artifactId>jaxb-impl</artifactId>
+            <version>2.3.0</version>
+        </dependency>
+        <dependency>
+            <groupId>com.sun.xml.bind</groupId>
+            <artifactId>jaxb-core</artifactId>
+            <version>2.3.0</version>
+        </dependency>
+        <dependency>
+            <groupId>javax.activation</groupId>
+            <artifactId>activation</artifactId>
+            <version>1.1.1</version>
+        </dependency>
 ```
 
 **添加一个JWT的工具类来实现生成token和解析token**
@@ -301,7 +333,7 @@ import java.util.UUID;
  */
 public class JwtUtil {
     //设置保存时长
-    private static final long EXPIRE=60*1000;
+    private static final long EXPIRE=60*60*1000;
     //设置加密密钥
     private static final String ENCRYPTIONKEY="admin";
     //设置加密方式
@@ -313,28 +345,36 @@ public class JwtUtil {
         String token = jwtBuilder
                 //设置jwt的header部分
                 .setHeaderParam("type", "JWT")
-                        //指定加密算法
+                //指定加密算法
                 .setHeaderParam("alg", ENCRYPTION)
                 //设置JWT的payload部分
-                .claim(key, value)//设置jwt中存储的信息
+                    //设置jwt中存储的信息
+                .claim(key, value)
+                    //设置签发时间
+                .setIssuedAt(new Date(System.currentTimeMillis()))
                     //设置过期时间
                 .setExpiration(new Date(System.currentTimeMillis() + EXPIRE))
-                .setId(UUID.randomUUID().toString())//设置token的ID
+                    //设置token的ID
+                .setId(UUID.randomUUID().toString())
                 //设置JWT的signature部分
                 .signWith(SignatureAlgorithm.valueOf(ENCRYPTION), ENCRYPTIONKEY)
                 .compact();
         return token;
     }
     //解析token
-    public static Claims parseToken(String token){
+       public static Claims parseToken(String token) {
+        Claims claims;
         try {
-            return Jwts.parser()
+            claims = Jwts.parser()
+                    // 设置标识名
                     .setSigningKey(ENCRYPTIONKEY)
+                    //解析token
                     .parseClaimsJws(token)
                     .getBody();
-        }catch (Exception e){
-            return null;
+        } catch (ExpiredJwtException e) {
+                claims = e.getClaims();
         }
+        return claims;
     }
 }
 ```
@@ -397,16 +437,21 @@ public class LoginServiceImpl implements LoginService {
     @Autowired
     private AuthenticationManager authenticationManager;
 
-    public Result login(UserInfo userInfo) {
-        //生成Authentication接口的实现类对象
-        UsernamePasswordAuthenticationToken authenticationToken=new UsernamePasswordAuthenticationToken(userInfo.getUsername(),userInfo.getPassword());
-        //使用AuthenticationManager 的authenticate方法进行认证，需要传个Authentication对象
-        Authentication authenticate = authenticationManager.authenticate(authenticationToken);
-        //从认证后的Authentication对象中获取用户信息
-        MyUserDetails myUserDetails = (MyUserDetails) authenticate.getPrincipal();
-        UserInfo userInfo1 = myUserDetails.getUserInfo();
-        //将用户信息生成token进行返回
-        String token = JwtUtil.getToken("userId", userInfo1.getId());
+  public Result securityLogin(UserInfo userInfo) {
+        //使用AuthenticationManager 的authenticate方法进行用户认证，
+        //1.将用户封装到authentication对象,authentication是接口需要他的实现类
+        UsernamePasswordAuthenticationToken usernamePasswordAuthenticationToken=new UsernamePasswordAuthenticationToken(userInfo.getUsername(), userInfo.getPassword());
+        //2.传入authentication对象的实现类UsernamePasswordAuthenticationToken
+        Authentication authenticate = authenticationManager.authenticate(usernamePasswordAuthenticationToken);
+        //如果认证没通过给出提示
+        if (Objects.isNull(authenticate)){
+            throw new RuntimeException("认证失败");
+        }
+        //获取认证成功后的UserDetails对象
+        MyUserDetails myUserDetails =(MyUserDetails) authenticate.getPrincipal();
+        //根据用户id生成token
+        String token = JwtUtil.getToken("userId", myUserDetails.getUserInfo().getId());
+        //把完整用户信息存入redis，用户id为key，用户信息为value
         return Result.success().data("token",token);
     }
 }
