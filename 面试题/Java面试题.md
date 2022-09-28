@@ -285,6 +285,16 @@ System.out.println(s1.equals(s2)); // true  String重写equals比较的是值
 * final修饰的方法不能被重写。
 * final修饰的变量叫做常量，常量必须初始化，初始化后的值就不能被修改。
 
+### finally
+
+> try-catch-finally
+
+* 无论是否出现异常，finally块中的代码都会执行。
+* 当try和catch中有return时，finally仍然会执行，无论try里面执行了return语言，break语句、还是continue语句，finally语句块还会继续执行，但是如果执行try和catch时JVM退出(比如System.exit(0))，那么finally不会被执行。
+* finally是在return后面的表达式运算后执行的(此时并没有返回运算后的值，而是先把要返回的值保存起来，然后执行finally中的代码，此时不管finally中的代码怎样运算，返回值都不会改变，依然是之前保存的值)
+* 当try和finally里面都有return时，会忽略try的return，而使用finally的return。
+* 如果try代码块中的代码抛出异常，执行finally时又抛出异常，此时原始异常信息丢失，只抛出finally代码块中的异常。
+
 ### Math.round()方法作用
 
 Math.round()方法为值先加上0.5然后做四舍五入。例如`Math.round(-1.5)=-1`。
