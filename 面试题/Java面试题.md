@@ -182,6 +182,12 @@ JDK1.8之前不能访问非final的局部变量!
 * 拷贝引用，为了避免引用值发生改变，例如被外部类的方法修改等，而导致内部类得到的值不一致，于是用final来让改引用不可变。
 * 在JDK1.8之后可以访问一个非局部变量，前提是非final的局部变量没有修改，表现的和final变量一样才可以！
 
+### switch
+
+**switch字符串实现原理：** 代码编译后switch会基于整数进行比较，整数来源与string的hashCode，会先比较字符串的hashCode，然后在判断equals。
+
+**字节码实现原理：** 编译器会使用tableswitch和lookupswitch指令来生成switch语句的编译代码。将switch语句的case分支的条件值比较稀疏时，tableswitch指令的空间使用率偏低，这种情况下将使用lookupswitch指令来替代。lookupswitch指令的索引表由int类型的键（来源于case语句后面的数值）与对应的目标语句偏移量所构成。lookupswitch指令执行时，switch语句的条件值将索引表中的键值进行比较，如果某一个键和条件值相符，那么将转移到这个键对应的分支偏移量继续执行，如果没有键值符合，执行将在default分支执行。
+
 ### JDK和JRE的区别？
 
 **JDK：**Java开发工具包，提供了Java的开发环境和运行环境。
