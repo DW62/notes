@@ -27,6 +27,7 @@
      <artifactId>mybatis-plus-boot-starter</artifactId>
      <version>3.5.2</version>
 </dependency>
+<!--lombok依赖-->
 <dependency>
      <groupId>org.projectlombok</groupId>
      <artifactId>lombok</artifactId>
@@ -165,7 +166,12 @@ spring:
     url: jdbc:mysql://localhost:3306/security?serverTimezone=UTC&useUnicode=true&characterEncoding=utf8&useSSL=false
     username: root
     password: root
-
+ ## redis配置
+  redis:
+  	database: 0
+    password: redis
+    host: 39.105.29.9
+    port: 6380
 ## 设置mybatis-plus   xml文件位置
 mybatis-plus:
   mapper-locations: classpath*:/mapper/**mapper.xml
