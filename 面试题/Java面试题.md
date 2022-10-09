@@ -685,3 +685,21 @@ Collections是一个包装类，它提供了很多静态方法，不能被实例
 ### Array中可以接受泛型吗？
 
 Array事实上并不支持泛型。
+
+### JDK序列化
+
+> 序列化（Serizalizable）：将实现了Serializable接口的对象转换成一个字节数字，并可以将改字节数组转换为原来的对象。
+
+ObjectOutPutStream是专门用来输出对象的输出流
+
+ObjectOutPutStream将Java对象写入OutputStream。可以使用ObjectInputStream读取对象。
+
+### serialVersionUID
+
+Java的序列化机制是通过在运行时判断类的serialVersionUID来验证版本一致性的。在进行反序列化时，JVM会把传来的字节流中的serialVersionUID与本地相应实体类的seralVersionUID进行比较，如果相同就会认为是一致的，可以进行反序列化，否则就会出现序列化版本不一致的异常(InvalidCastExeption)。
+
+如果没有添加serialVersionUID，进行了序列化，而在反序列化的时候，修改了类的解构(添加或删除成员变量，修改成员变量的命名)此时会报错。
+
+如果添加serialVersionUID，进行了序列化，而在反序列化的时候，修改了类的解构(添加或删除了成员变量，修改成员变量的命名)那么可以会恢复部分数据，或者恢复不了数据。
+
+如果设置了serialVersionUID并且一致，那么就会反序列化部分数据；如果没有设置，那么只要属性不同，那么无法反序列化。
