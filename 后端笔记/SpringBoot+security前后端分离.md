@@ -1230,3 +1230,15 @@ public class LogoutServiceImpl implements LogoutService {
 }
 ```
 
+## 授权
+
+ SpringSecurity为提供了基于注解的权限控制方案
+
+ 我们可以使用注解去指定访问对应的资源所需的权限。
+
+ 但是要使用它我们需要先开启相关配置。配置类中。
+
+```java
+@EnableGlobalMethodSecurity(prePostEnabled = true)
+```
+
