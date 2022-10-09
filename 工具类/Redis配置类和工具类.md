@@ -26,6 +26,8 @@ public class RedisConfig {
         ObjectMapper om = new ObjectMapper();
         om.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.ANY);
         om.enableDefaultTyping(ObjectMapper.DefaultTyping.NON_FINAL);
+        //用来解决序列化对象中包含对象，并且对象属性有get、set时出现错误
+        om.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         jackson2JsonRedisSerializer.setObjectMapper(om);
         //String序列化
         StringRedisSerializer stringRedisSerializer = new StringRedisSerializer();
