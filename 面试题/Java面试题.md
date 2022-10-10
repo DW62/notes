@@ -703,3 +703,65 @@ Java的序列化机制是通过在运行时判断类的serialVersionUID来验证
 如果添加serialVersionUID，进行了序列化，而在反序列化的时候，修改了类的解构(添加或删除了成员变量，修改成员变量的命名)那么可以会恢复部分数据，或者恢复不了数据。
 
 如果设置了serialVersionUID并且一致，那么就会反序列化部分数据；如果没有设置，那么只要属性不同，那么无法反序列化。
+
+### 对象深拷贝与浅拷贝
+
+当拷贝一个变量时，原始引用和拷贝的引用会指向同一个对象，改变其中一个对象，会对另一个对象产生影响。如果需要创建一个对象的浅拷贝，那么需要调用clone方法。
+
+> Object 类本身是不实现接口Cloneable，直接调用clone会抛出异常。
+>
+> 如果要在自己定义的类中调用clone方法，必须实现Cloneable接口(标记型接口)，因为Object类中的clone方法为protected，所以需要自己重写clone方法，设置为public
+
+**例如：**
+
+```java
+public class Person implements Cloneable {
+    private int age;
+    private String  name;
+    private Company company;
+    @Override
+    public Person clone() throws CloneNotSupportedException {
+        return (Person) super.clone();
+    }
+}
+```
+
+使用super(即Object)的clone方法只能进行浅拷贝。
+
+> 如果想实现深拷贝，需要修改为：
+
+```java
+@Override
+public Person clone() throws CloneNotSupportedException {
+    Person person = (Person) super.clone();
+    person.setCompany(company.clone()); // 一个新的Company
+    return person;
+}
+```
+
+假如Company中还有其他对象的引用，那么Company中也要像Person这样做。
+
+可以说：想要深拷贝一个子类，那么它的所有父类都必须可以实现深拷贝。
+
+> 另一种实现深拷贝的方法是通过序列化实现。
+
+```java
+@Override
+protected Object clone()  {
+try {
+   ByteArrayOutputStream baos = new ByteArrayOutputStream();
+   ObjectOutputStream os = new ObjectOutputStream(baos);
+   os.writeObject(this);
+   os.close();
+   ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
+   ObjectInputStream in = new ObjectInputStream(bais);
+   Object ret = in.readObject();
+   in.close();
+   return ret;
+}catch(Exception e) {
+   e.printStackTrace();
+}
+	return null;
+}
+```
+
