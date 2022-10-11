@@ -83,3 +83,185 @@ AccessDecisionVoter和AccessDecisionManager都有众多实现类，在AccessDeci
 **授权总结：**
 
 >在授权时当我们要访问某一个资源时，需要先经过AccessDecisionManager，而AccessDecisionManager会将当前用户的角色封装到ConfigAttribute，同时会调用AccessDecisionVoter来进行对，要访问资源(或接口的权限信息)与ConfigAttribute进行比对，如果AccessDecisionVoter投出赞成则表示当前用户有访问该资源的权限
+
+## Security自动配置原理
+
+> 在开发时，只要添加上Security的依赖，则就会对所有的请求进行拦截控制，是因为将Security依赖添加上之后，SpringBoot就会启用Security默认配置创建一个SecurityFilterChain
+
+SpringBootWebSecurityConfiguration类就是SpringBoot对Security配置类
+
+```java
+@Configuration(proxyBeanMethods = false)
+@ConditionalOnDefaultWebSecurity
+@ConditionalOnWebApplication(type = Type.SERVLET)//当运行的容器满足是一个Servlet时生效
+class SpringBootWebSecurityConfiguration {
+    @Bean
+    @Order(SecurityProperties.BASIC_AUTH_ORDER)
+    SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) throws Exception {
+    //要求所有请求都要认证
+    http.authorizeRequests().anyRequest().authenticated()
+    			.and().formLogin().and().httpBasic();
+        return http.build();
+    }
+}
+```
+
+通过上面对自动配置分析，我们也能看出默认生效条件为:
+
+```java
+class DefaultWebSecurityCondition extends AllNestedConditions {
+
+    DefaultWebSecurityCondition() {
+        super(ConfigurationPhase.REGISTER_BEAN);
+    }
+
+    @ConditionalOnClass({ SecurityFilterChain.class, HttpSecurity.class })
+    static class Classes {
+
+    }
+
+    @ConditionalOnMissingBean({ WebSecurityConfigurerAdapter.class, SecurityFilterChain.class })
+    static class Beans {
+
+    }
+
+}
+```
+
+- 条件一 classpath中存在 SecurityFilterChain.class或者存在HttpSecurity.class。当项目中引入Security依赖时，项目中肯定存在 SecurityFilterChain.class，所以说第一个条件一定是满足的。
+- 条件二 没有自定义 WebSecurityConfigurerAdapter.class和SecurityFilterChain.class
+
+> **结论：**只要我们不自定义配置类(比如WebSecurityConfigurerAdapter) ，条件都是满足的，也就加载默认的配置。否则如果要进行自定义配置，就要继承这个WebSecurityConfigurerAdapter类，通过覆盖类中方法达到修改默认配置的目的。**WebSecurityConfigurerAdapter** 这个类极其重要，Spring Security 核心配置都在这个类中
+
+### Security请求时默认的流程
+
+![image-20221011222808409](https://raw.githubusercontent.com/DW62/ImgStg/master/image-20221011222808409.png)
+
+1. 请求/hello接口，在引入Security之后会先经过一些过滤器
+2. 在请求到达FilterSecurityInterceptor时，发现请求未认证。请求拦截下来，并抛出AccessDeniedException异常。
+3. 抛出的AccessDeniedException异常会被ExceptionTranslationFilter捕获，这个Filter中会调用LoginUrlAuthenticationEntryPoint类的commence方法给客户端返回302，要求客户端进行重定向到/login页面。
+4. 客户端发送/login请求。
+5. /login请求会再次被拦截器中的DefaultLoginPageGeneratingFilter拦截到，并在拦截器中返回生成的登录页面。
+
+**这就是没有配置登录页面，但是返回登录页面的原因！**
+
+### Security默认用户的生成
+
+1. 查看SpringBootWebSecurityConfiguration类的defaultSecurityFilterChain方法
+
+![image-20221011224954206](https://raw.githubusercontent.com/DW62/ImgStg/master/image-20221011224954206.png)
+
+2. 处理登录为FormLoginConfigurer类中调用UsernamePasswordAuthenticationFilter这个类实例
+
+![image-20221011225301086](https://raw.githubusercontent.com/DW62/ImgStg/master/image-20221011225301086.png)
+
+3. 查看类UsernamePasswordAuthenticationFilter中的attemptAuthentication方法得知实际调用AuthenticationManager中authenticate方法进行认证
+
+![image-20221011225523354](https://raw.githubusercontent.com/DW62/ImgStg/master/image-20221011225523354.png)
+
+4. 调用ProviderManager类中方法authenticate
+
+![image-20221011225726063](https://raw.githubusercontent.com/DW62/ImgStg/master/image-20221011225726063.png)
+
+5. 调用了ProviderManager实现类中的AbstractUserDetailsAuthenticationProvider类中的方法
+
+![image-20221011230018420](https://raw.githubusercontent.com/DW62/ImgStg/master/image-20221011230018420.png)
+
+6. 最终调用实现类DaoAuthennticationProvider类中方法比较
+
+![image-20221011230132740](https://raw.githubusercontent.com/DW62/ImgStg/master/image-20221011230132740.png)
+
+![image-20221011230200930](https://raw.githubusercontent.com/DW62/ImgStg/master/image-20221011230200930.png)
+
+此时就知道默认是基于InMemoryUserDetailsManager这个类，也就是基于内存实现的。
+
+通过查看源码可以分析出UserDetailService是顶层父接口，接口中的loadUserByUserName方法是用来认证时进行用户名认证方法，默认实现使用的是内存实现，**如果想要修改为数据库实现，我们只需要自定义UserDetailService实现，最终返回UserDetails实例即可**。
+
+```java
+public interface UserDetailsService {
+	UserDetails loadUserByUsername(String username) throws UsernameNotFoundException;
+}
+```
+
+![image-20221011230950199](https://raw.githubusercontent.com/DW62/ImgStg/master/image-20221011230950199.png)
+
+**结论：**
+
+1. 从自动配置源码中得知当classpath下存在AuthenticationManager类
+2. 当项目中，系统没有通过AuthenticationManager.class、AuthenticationProvider.class、UserDetailsService.class、AuthenticationManagerResolver.class实例
+
+默认情况下都会满足，此时Security就会提供一个InMemoryUserDetailManager实例
+
+![image-20221011231702386](https://raw.githubusercontent.com/DW62/ImgStg/master/image-20221011231702386.png)
+
+```java
+@ConfigurationProperties(prefix="spring.security")
+public class SecurityProperties{
+    private final User user=new User();
+    public User getUser(){
+        return this.user;
+    }
+    //...
+    public static class User{
+        private String name = "user";
+        private String password = UUID.randomUUID().toString();
+        private List<String> roles=new ArrayList<>();
+        private boolean passwordGanerater=true;
+        //....
+    }
+}
+```
+
+这就是默认生成user和uuid密码的过程。另外还知道可以在配置文件中对内存中用户和密码进行覆盖。
+
+```properties
+spring.security.user.name=root
+pring.security.user.password=root
+pring.security.user.roles=admin,t
+```
+
+
+
+## Security提供的过滤器
+
+| 过滤器                                          | 过滤器作用                                               | 默认是否加载 |
+| ----------------------------------------------- | -------------------------------------------------------- | ------------ |
+| ChannelProcessingFilter                         | 过滤请求协议 HTTP 、HTTPS                                | NO           |
+| `WebAsyncManagerIntegrationFilter`              | 将 WebAsyncManger 与 SpringSecurity 上下文进行集成       | YES          |
+| `SecurityContextPersistenceFilter`              | 在处理请求之前,将安全信息加载到 SecurityContextHolder 中 | YES          |
+| `HeaderWriterFilter`                            | 处理头信息加入响应中                                     | YES          |
+| CorsFilter                                      | 处理跨域问题                                             | NO           |
+| `CsrfFilter`                                    | 处理 CSRF 攻击                                           | YES          |
+| `LogoutFilter`                                  | 处理注销登录                                             | YES          |
+| OAuth2AuthorizationRequestRedirectFilter        | 处理 OAuth2 认证重定向                                   | NO           |
+| Saml2WebSsoAuthenticationRequestFilter          | 处理 SAML 认证                                           | NO           |
+| X509AuthenticationFilter                        | 处理 X509 认证                                           | NO           |
+| AbstractPreAuthenticatedProcessingFilter        | 处理预认证问题                                           | NO           |
+| CasAuthenticationFilter                         | 处理 CAS 单点登录                                        | NO           |
+| OAuth2LoginAuthenticationFilter                 | 处理 OAuth2 认证                                         | NO           |
+| Saml2WebSsoAuthenticationFilter                 | 处理 SAML 认证                                           | NO           |
+| `UsernamePasswordAuthenticationFilter`          | 处理表单登录                                             | YES          |
+| OpenIDAuthenticationFilter                      | 处理 OpenID 认证                                         | NO           |
+| `DefaultLoginPageGeneratingFilter`              | 配置默认登录页面                                         | YES          |
+| `DefaultLogoutPageGeneratingFilter`             | 配置默认注销页面                                         | YES          |
+| ConcurrentSessionFilter                         | 处理 Session 有效期                                      | NO           |
+| DigestAuthenticationFilter                      | 处理 HTTP 摘要认证                                       | NO           |
+| BearerTokenAuthenticationFilter                 | 处理 OAuth2 认证的 Access Token                          | NO           |
+| `BasicAuthenticationFilter`                     | 处理 HttpBasic 登录                                      | YES          |
+| `RequestCacheAwareFilter`                       | 处理请求缓存                                             | YES          |
+| `SecurityContextHolder<br />AwareRequestFilter` | 包装原始请求                                             | YES          |
+| JaasApiIntegrationFilter                        | 处理 JAAS 认证                                           | NO           |
+| RememberMeAuthenticationFilter                  | 处理 RememberMe 登录                                     | NO           |
+| `AnonymousAuthenticationFilter`                 | 配置匿名认证                                             | YES          |
+| OAuth2AuthorizationCodeGrantFilter              | 处理OAuth2认证中授权码                                   | NO           |
+| `SessionManagementFilter`                       | 处理 session 并发问题                                    | YES          |
+| `ExceptionTranslationFilter`                    | 处理认证/授权中的异常                                    | YES          |
+| `FilterSecurityInterceptor`                     | 处理授权相关                                             | YES          |
+| SwitchUserFilter                                | 处理账户切换                                             | NO           |
+
+可以看出，Spring Security 提供了 30 多个过滤器。默认情况下Spring Boot 在对 Spring Security 进入自动化配置时，会创建一个名为 SpringSecurityFilerChain 的过滤器，并注入到 Spring 容器中，这个过滤器将负责所有的安全管理，包括用户认证、授权、重定向到登录页面等。具体可以参考WebSecurityConfiguration的源码:
+
+![image-20221011214845313](https://raw.githubusercontent.com/DW62/ImgStg/master/image-20221011214845313.png)
+
+![image-20221011214903430](https://raw.githubusercontent.com/DW62/ImgStg/master/image-20221011214903430.png)
+
