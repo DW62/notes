@@ -765,3 +765,22 @@ try {
 }
 ```
 
+### Error和Exception
+
+Error是程序无法处理的错误，它是由JVM产生和抛出的，比如OutOfMenoryError、ThreadDeath等。这些异常发生时Java虚拟机一般会选择线程终止。
+
+Exception是程序本身出现可以处理的异常，这种异常分两大类运行时异常和非运行时异常。程序中应该尽可能处理这些异常。
+
+### 常见的RuntimeException
+
+* lllegalArgumentException：方法的参数无效
+* NullPointerException：试图访问一空对象的变量、方法或空数组的元素
+* ArrayIndexOUtOfBoundsException：数组越界访问
+* ClassCastException：类型转换异常
+* NumberFormatException继承lllegalArgumentException：字符串转换为数字时出现
+
+### RuntimeException与非RuntimeException
+
+* RuntimeException是运行时异常，也称为非检查异常
+* 非RuntimeException也称CheckedException受检异常
+* 前者可以不必进行try-catch，后者必须进行try-catch或throw
