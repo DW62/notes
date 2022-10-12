@@ -220,8 +220,6 @@ pring.security.user.password=root
 pring.security.user.roles=admin,t
 ```
 
-
-
 ## Security提供的过滤器
 
 | 过滤器                                          | 过滤器作用                                               | 默认是否加载 |
@@ -264,4 +262,252 @@ pring.security.user.roles=admin,t
 ![image-20221011214845313](https://raw.githubusercontent.com/DW62/ImgStg/master/image-20221011214845313.png)
 
 ![image-20221011214903430](https://raw.githubusercontent.com/DW62/ImgStg/master/image-20221011214903430.png)
+
+## 自定义认证
+
+### 自定义资源权限认证规则
+
+> 在引入security后，如果没有进行配置，则security就会使用默认认证规则，将所有请求都进行拦截。
+
+要想实现自定义资源认证规则，就需要自定义资源配置规则，在项目中添加security配置类
+
+```java
+@Configuration
+public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
+    //自定义security配置
+    @Override
+    protected void configure(HttpSecurity http) throws Exception {
+        //资源权限管理
+        http.authorizeRequests()//开启权限配置
+                .mvcMatchers("/index").permitAll()//放行资源
+                .mvcMatchers("/home").authenticated()//需要认证的资源
+                .anyRequest().authenticated();//所有资源都需要进行认证 ，放行资源必须放在该配置之前
+        	
+        //认证方式
+        http.formLogin();//不加上该配置·访问受限资源，直接出现错误页面，没有默认的登录页面
+    }
+}
+```
+
+### 自定义登录界面
+
+在security在访问受限资源时会跳转到默认登录页面。在实际开发时默认登录页面不满足需要，就需要自定义登录页面。
+
+**在常规前后端不分离项目中进行自定义登录界面：**
+
+1. 修改security配置类，进行自定义登录界面的配置。
+
+```java
+@Configuration
+public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
+    //自定义security配置
+    @Override
+    protected void configure(HttpSecurity http) throws Exception {
+        //资源权限管理
+        http.authorizeRequests()//开启权限配置
+                .mvcMatchers("/goLogin").permitAll()//放行去登录页面的请求
+                .mvcMatchers("/goError").permitAll()//放行去error页面的请求
+                .mvcMatchers("/index").permitAll()//放行资源
+                .mvcMatchers("/home").authenticated()//需要认证的资源
+                .anyRequest().authenticated();//所有资源都需要进行认证
+        //认证方式
+        http.formLogin()
+                //设置登录页面,一旦设置该配置，就必须指定登录的url
+                .loginPage("/goLogin")
+                //设置登录的url，该url不需要自定义controller，但是必须和登录页面表单action的url一致
+                .loginProcessingUrl("/doLogin")
+                //设置登录表单用户名的name属性值
+                .usernameParameter("uname")
+                //设置登录表单密码的name属性值
+                .passwordParameter("pwd")
+                //设置登录成功后forward(重定向)跳转的url,浏览器地址栏不会改变，同时始终在认证之后跳转到指定请求
+//                .successForwardUrl("/home")
+                //设置登录成功后redirect(转发)跳转的url，浏览器地址栏会改变，会根据上一个保存请求进行成功跳转 ，可以通过传递第二次参数为false，来使始终跳转到指定请求
+                .defaultSuccessUrl("/home");
+        //关闭csrf
+        http.csrf().disable();
+    }
+}
+```
+
+> successForwardUrl和defaultSuccessUrl两个方法都可以实现成功之后的跳转
+>
+> * successForwardUrl默认使用orward(重定向)跳转的url,浏览器地址栏不会改变，同时始终在认证之后跳转到指定请求
+> * defaultSuccessUrl默认使用redirect(转发)跳转的url，浏览器地址栏会改变，会根据上一个保存请求进行成功跳转 ，可以通过传递第二次参数为false，来使始终跳转到指定请求
+
+2. 先引入thymeleaf依赖
+
+```xml
+<dependency>
+        <groupId>org.springframework.boot</groupId>
+         <artifactId>spring-boot-starter-thymeleaf</artifactId>
+</dependency>
+```
+
+thymeleaf默认是开启缓存的，所以要想修改后页面直接生效，就需要修改thymeleaf配置，关闭缓存
+
+```properties
+# 设置thymeleaf缓存
+spring.thymeleaf.cache=false
+```
+
+3. 根据配置类中的配置创建一个登录页面
+
+```html
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>用户登录</title>
+</head>
+<body>
+    <h1>用户登录</h1>
+    <form method="post" th:action="@{/doLogin}">
+        用户名:<input type="text" name="uname"><br>
+        密 码:<input type="text" name="pwd"><br>
+        <input type="submit" value="登录">
+    </form>
+</body>
+</html>
+```
+
+**注意：**
+
+* 要在页面中添加上` xmlns:th="http://www.thymeleaf.org"`
+
+4. 定义一个跳转到登录页的controller
+
+```java
+@Controller
+public class LoginController {
+    @RequestMapping("/login.html")
+    public String login() {
+        return "login";
+    }
+}
+```
+
+### 自定义登录成功后处理，来实现前后的分离项目使用
+
+successForwardUrl和defaultSuccessUrl两个方法只能在传统项目中实现登录成功之后，通过系统中controller实现系统中页面跳转，但是在前后端分离项目中，登录成功后往往需要给前端返回一个JSON数据，successForwardUrl和defaultSuccessUrl两个方法就不能实现。
+
+此时就需要通过自定义`AuthenticationSuccessHandler`实现类
+
+**具体实现：**
+
+1. 首先修改Security配置类，不在使用successForwardUrl和defaultSuccessUrl两个方法来进行登录成功后处理，而使用` successHandler()`方法。
+2. 自定义`AuthenticationSuccessHandler`实现类MyAuthenticationSuccessHandler
+
+```java
+/**
+ * 自定义认证成功之后的处理
+ * @author: DW 
+ */
+public class MyAuthenticationSuccessHandler implements AuthenticationSuccessHandler {
+    @Override
+    public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException, ServletException {
+        Map<String,Object> result = new HashMap<>();
+        result.put("msg","登录成功");
+        result.put("status",200);
+        result.put("认证数据",authentication);
+        response.setContentType("application/json;charset=utf-8");
+        String s=new ObjectMapper().writeValueAsString(result);
+        response.getWriter().write(s);
+    }
+}
+```
+
+### 自定义登录失败处理
+
+SpringSecurity也可以在配置类中进行配置，实现登录失败的页面跳转
+
+**配置一：**
+
+```java
+   //登录失败处理，传入登录失败要跳转的页面处理url
+     .failureUrl("/goError");
+```
+
+这种方法的处理，是使用redirect(转发)跳转的url，还会将错误信息封装到Session中的`SPRING_SECURITY_LAST_EXCEPTION`中，错误信息获取方法：
+
+```html
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>登录失败页面</title>
+</head>
+<body>
+    <h1>登录失败跳转的页面</h1>
+    失败原因：<h1 th:text="${session.SPRING_SECURITY_LAST_EXCEPTION}"></h1>
+</body>
+</html>
+```
+
+**配置二：**
+
+```java
+//登录失败处理传入登录失败要跳转的页面处理url
+.failureForwardUrl("/goError");
+```
+
+这种方法的处理，是使用forward(重定向)跳转的url，还会将错误信息封装到request中的`SPRING_SECURITY_LAST_EXCEPTION`中，错误信息获取方法：
+
+```html
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>登录失败页面</title>
+</head>
+<body>
+    <h1>登录失败跳转的页面</h1>
+    失败原因：<h1 th:text="${SPRING_SECURITY_LAST_EXCEPTION}"></h1>
+</body>
+</html>
+```
+
+### 自定义登录失败后处理，来实现前后的分离项目使用
+
+failureUrl和failureForwardUrl两个方法只能在传统项目中实现登录失败之后，通过系统中controller实现系统中页面跳转，但是在前后端分离项目中，登录失败后往往需要给前端返回一个JSON数据，failureUrl和failureForwardUrl两个方法就不能实现。
+
+此时就需要通过自定义`AuthenticationFailureHandler`实现类
+
+**具体实现：**
+
+1. 首先修改Security配置类，不在使用failureUrl和failureForwardUrl两个方法进行登录失败后处理，而使用` failureHandler()`方法。
+2. 自定义`AuthenticationFailureHandler`实现类MyAuthenticationFailureHandler
+
+```java
+/**
+ * 自定义登录失败后的处理
+ * @author: DW 
+ */
+public class MyAuthenticationFailureHandler implements AuthenticationFailureHandler {
+    @Override
+    public void onAuthenticationFailure(HttpServletRequest request, HttpServletResponse response, AuthenticationException exception) throws IOException, ServletException {
+        Map<String,Object> result = new HashMap<>();
+        result.put("msg","登录失败，失败原因："+exception.getMessage());
+        result.put("status",500);
+        response.setContentType("application/json;charset=utf-8");
+        String s=new ObjectMapper().writeValueAsString(result);
+        response.getWriter().write(s);
+    }
+}
+}
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
