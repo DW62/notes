@@ -497,17 +497,126 @@ public class MyAuthenticationFailureHandler implements AuthenticationFailureHand
 }
 ```
 
+### 注销登录
+
+> security默认是开启了注销登录的操作，并且默认注销为/logout，请求方式为GET
+
+**配置注销登录：**
+
+```java
+ //设置注销
+        http.logout()
+                .logoutUrl("/logout")//设置退出登录的url，默认请求为/logout，默认请求方式为get
+                .invalidateHttpSession(true)//设置退出登录时清除session，默认值就是true
+                .clearAuthentication(true)//设置退出登录时，清除当前认证标记，默认值就是true
+                .logoutSuccessUrl("/goLogin");//设置注销成功之后访问的页面
+        
+```
+
+**配置多个注销登录请求：**
+
+```java
+ //设置注销
+        http.logout()
+                //配置多个注销登录请求，同时设置请求方式
+                .logoutRequestMatcher(new OrRequestMatcher(
+                        new AntPathRequestMatcher("/logout","GET"),
+                        new AntPathRequestMatcher("/goLogout","POST")
+                ))
+                .invalidateHttpSession(true)//设置退出登录时清除session，默认值就是true
+                .clearAuthentication(true)//设置退出登录时，清除当前认证标记，默认值就是true
+                .logoutSuccessUrl("/goLogin");//设置注销成功之后访问的页面
+        
+```
+
+自定义注销登录后处理，来实现前后的分离项目使用
+
+在前后的分离项目中，注销成功之后就不需要进行页面跳转，只需要返回一个JSON数据来说明注销登录成功即可。
+
+此时就需要在配置类中使用`logoutSuccessHandler`方法，然后通过自定义`LogoutSuccessHandler`实现类来返回Json数据。
+
+```java
+public class MyLogoutSuccessHandler implements LogoutSuccessHandler {
+    @Override
+    public void onLogoutSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException, ServletException {
+        Map<String,Object> result = new HashMap<>();
+        result.put("msg","注销登录成功");
+        result.put("status",200);
+        response.setContentType("application/json;charset=utf-8");
+        String s=new ObjectMapper().writeValueAsString(result);
+        response.getWriter().write(s);
+    }
+}
+```
+
+## 登录用户数据获取
+
+Spring Security会将登录用户数据保存在Session中。但是，为了使用方便,Spring Security在此基础上还做了一些改进，其中最主要的-一个变化就是线程绑定。当用户登录成功后,Spring Security会将登录成功的用户信息保存到SecurityContextHolder中。
+
+SecurityContextHolder中的数据保存默认是通过ThreadLocal来实现的，使用ThreadLocal创建的变量只能被当前线程访问，不能被其他线程访问和修改，也就是用户数据和请求线程绑定在一起。 当登录请求处理完毕后，Spring Security会将SecurityContextHolder中的数据拿出来保存到Session中，同时将SecurityContexHolder中的数据清空。以后每当有请求到来时，Spring Security就会先从Session中取出用户登录数据，保存到SecurityContextHolder中，方便在该请求的后续处理过程中使用，同时在请求结束时将SecurityContextHolder中的数据拿出来保存到Session中，然后将SecurityContextHolder中的数据清空。
+
+实际上SecurityContextHolder中存储是SecurityContext,。在SecurityContext中存储是Authentication。
+
+![image-20221013222244228](https://raw.githubusercontent.com/DW62/ImgStg/master/image-20221013222244228.png)
 
 
 
+在SecurityContextHolder类中有一个setContext方法来设置上下文对象方法，和一个getContext方法来获取上下文对象方法
 
+```java
+//SecurityContextHolder类中获取上下文方法
+public static SecurityContext getContext() {
+		return strategy.getContext();   //根据SecurityContextHolder中的策略来获取上下文对象
+}
 
+private static SecurityContextHolderStrategy strategy;
+```
 
+**策略说明：**SecurityContextHolderStrategy用来定义存储策略方法
 
+```java
+//SecurityContextHolder中获取上下文对象的策略
+public interface SecurityContextHolderStrategy {
+	//用来清除存储的SecurityContext对象
+	void clearContext();
+	//用来获取存储的SecurityContext对象
+	SecurityContext getContext();
+	//用来设置存储的SecurityContext对象
+	void setContext(SecurityContext context);
+	//用来创建一个空的SecurityContext对象
+	SecurityContext createEmptyContext();
+}
+```
 
+策略接口的实现类和接口对应策略
 
+![image-20221013225342273](https://raw.githubusercontent.com/DW62/ImgStg/master/image-20221013225342273.png)
 
+* ListeningSecurityContextHolderStrategy
+* InheritableThreadLocalSecurityContextHolderStrategy
+* GlobalSecurityContextHolderStrategy
+* ThreadLocalSecurityContextHolderStrategy
 
+1. `MODE_THREADLOCAL` :这种存放策略是将SecurityContext存放在ThreadLocal中,Threadlocal的特点是在哪个线程中存储就要在哪个线程中读取，这其实非常适合web应用，因为在默认情况下，一个请求无论经过多少Filter到达Servlet,都是由一个线程来处理的。这也是SecurityContextHolder的默认存储策略，这种存储策略意味着如果在具体的业务处理代码中，开启了子线程，在子线程中去获取登录用户数据，就会获取不到。
+2. `MODE_INHERITABLETHREADLOCAL`：这种存储模式适用于多线程环境，如果希望在子线程中也能够获取到登录用户数据，那么可以使用这种存储模式。
+3. `MODE_GLOBAL`：这种存储模式实际上是将数据保存在一个静态变量中，在JavaWeb开发中，这种模式很少使用到。
 
+**修改策略：**
 
+![image-20221013231421262](https://raw.githubusercontent.com/DW62/ImgStg/master/image-20221013231421262.png)
 
+### 在代码中获取用户信息
+
+可以直接SecurityContextHolder中获取SecurityContext然后使用getAuthentication()获取认证信息。通过认证信息获取具体信息
+
+```java
+Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+System.out.println("身份信息："+authentication.getPrincipal());
+System.out.println("权限信息："+authentication.getAuthorities());
+```
+
+**这种方法只适用于单线程**
+
+### 多线程情况下获取用户信息
+
+由于默认策略不支持多线程获取认证信息，因此，先修改参数，使在多线程下依然可以获取用户信息，然后可以直接SecurityContextHolder中获取SecurityContext然后使用getAuthentication()获取认证信息。通过认证信息获取具体信息。
