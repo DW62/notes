@@ -620,3 +620,148 @@ System.out.println("权限信息："+authentication.getAuthorities());
 ### 多线程情况下获取用户信息
 
 由于默认策略不支持多线程获取认证信息，因此，先修改参数，使在多线程下依然可以获取用户信息，然后可以直接SecurityContextHolder中获取SecurityContext然后使用getAuthentication()获取认证信息。通过认证信息获取具体信息。
+
+### 传统项目页面获取用户信息
+
+传统项目使用的模板引擎都是thymeleaf，但是无法从thymeleaf直接获取用户认证信息，所有需要引入thymeleaf对security扩展的依赖。
+
+```xml
+<!--引入thymeleaf对security扩展的依赖-->
+<dependency>
+     <groupId>org.thymeleaf.extras</groupId>
+     <artifactId>thymeleaf-extras-springsecurity5</artifactId>
+     <version>3.0.4.RELEASE</version>
+</dependency>                     
+```
+
+在页面上添加命名空间
+
+```html
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+        xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+```
+
+此时就可以直接使用thymeleaf对security扩展的依赖的命名空间来获取用户认证信息。
+
+```html
+ <h1>认证用户信息</h1>
+ <ul>
+     <li sec:authentication="principal.username"></li>
+     <li sec:authentication="principal.authorities"></li>
+     <li sec:authentication="principal.accountNonExpired"></li>
+     <li sec:authentication="principal.accountNonLocked"></li>
+     <li sec:authentication="principal.credentialsNonExpired"></li>
+ </ul>
+```
+
+## 自定义认证数据源
+
+### 认证流程分析
+
+![image-20221014153215056](https://raw.githubusercontent.com/DW62/ImgStg/master/202210141532176.png)
+
+1. 发起认证请求，请求中携带用户名、密码，该请求会被`UsernamePasswordAuthenticationFilter`拦截。
+
+2. 在`UsernamePasswordApthenticationFilter`的`attemptAuthentication`方法中将
+   请求中用户名和密码，封装为`Authentication`对象，并交给`AuthenticationManager`进行认证。
+3. 认证成功，将认证信息存储到SecurityContextHodler以及调用记住我等，并回调
+   `AuthenticationSuccessHandler`处理。
+4. 认证失败，清除SecurityContextHolder以及记住我中的信息，回调`AuthenticationFailurHandler`处理。
+
+在进行认证时 AuthenticationManager 是认证的核心类，但实际上在底层真正认证时
+还离不开ProviderManager以及AuthenticationProvider 
+
+**三者关系**
+
+* AuthenticationManager是一个认证管理器，它定义了Spring Security过滤器要执行
+  认证操作。
+* ProviderManager  AuthenticationManager 接口的实现类。 Spring Security认证时默认使
+  用就是ProviderManager.
+* AuthenticationProvider就是针对不同的身份类型执行的具体的身份认证。
+
+**AuthenticationManager与ProviderManager关系**
+
+![image-20221014154646312](https://raw.githubusercontent.com/DW62/ImgStg/master/202210141546366.png)
+
+ProviderManager 是AuthenticationManager的唯一实现， 也是Spring Security默认使用实
+现。从这里不难看出默认情况下AuthenticationManager就是一个ProviderManager。
+
+**ProviderManager与AuthenticationProvider关系**
+
+![image-20221014154924239](https://raw.githubusercontent.com/DW62/ImgStg/master/202210141549320.png)
+
+​		在Spring Seourity中，允许系统同时支持多种不同的认证方式，例如同时支持用户名/密
+码认证、RememberMe 认证、手机号码动态认证等，而不同的认证方式对应了不同的AuthenticationProvider，所以一个完整的认证流程 可能由多个AuthenticationProvider来提
+供。
+​		多个AuthenticationProvider将组成一个列表， 这个列表将由ProviderManager 代理。换句
+话说，在ProviderManager 中存在一个AuthenticationProvider列表，在Provider Manager中
+遍历列表中的每一个AuthenticationProvider 去执行身份认证，最终得到认证结果。
+
+​		ProviderManager本身也可以再配置一个AuthenticationManager作为parent(父类)，这样当
+ProviderManager认证失败之后，就可以进入到parent(父类)中再次进行认证。理论上来说，
+ProviderManager的parent可以是任意类型的AuthenticationManager，但是通常都是由ProviderManager来扮演parent的角色，也就是ProviderManager 是ProviderManager的
+parent(父类)。
+
+​		ProviderManager本身也可以有多个，多个ProviderManager 共用同一个parent。有时，一
+个应用程序有受保护资源的逻辑组(例如，所有符合路径模式的网络资源，如/api**) ，每个组可以有自己的专用AuthenticationManager。通常每个组都是一个ProviderManager，它们共享一个父级。然后父级是一种全局资源，作为所有提供者的后备资源。
+
+​		根据上面的介绍，我们绘出新的AuthenticationManager. ProvideManager 和AuthentictionProvider关系
+
+![image-20221014160253805](https://raw.githubusercontent.com/DW62/ImgStg/master/202210141602875.png)
+
+弄清楚认证原理之后我们来看下具体认证时数据源的获取。默认情况下AuthenticationProvider是由DaoAuthenticationProvider 类来实现认证的，在DaoAuthenticationProvider认证时又通过UserDetailsService 完成数据源的校验。他们之间调用关系如下:
+
+![image-20221014160434481](https://raw.githubusercontent.com/DW62/ImgStg/master/202210141604544.png)
+
+**总结：** AuthenticationManager是认证管理器，在Spring Security中有全局AuthenticationManager，也可以有局部的AuthenticationManager。全局的AuthenticationManager用来对全局认证进行处理，局部的AuthenticationManager用来对某 些特殊资源认证处理。
+
+当然无论是全局认证管理器还是局部认证管理器都是由ProviderManger 进行实现。每一个ProviderManger中都代理一个AuthenticationProvider的列表， 列表中每一个实现代表一种身
+份认证方式。**认证时底层数据源需要调用UserDetailService来实现**。
+
+### 配置全局AuthenticationManager
+
+**方法一：** SpringBoot对Security默认配置中，在工厂中默认创建有AuthenticationManager，所有可以直接使用默认创建的
+
+```java
+  //SpringBoot对Security默认配置中，在工厂中默认创建有AuthenticationManager
+    @Autowired
+    public void initialize(AuthenticationManagerBuilder builder) throws Exception {
+        System.out.println("SpringBoot默认配置："+builder);
+        //创建一个基于内存的数据源，当然也可以创建其他的数据源
+        InMemoryUserDetailsManager userDetailsManager = new InMemoryUserDetailsManager();
+        userDetailsManager.createUser(User.withUsername("user").password("{noop}123").roles("admin").build());
+        //构建数据源方法
+        builder.userDetailsService(userDetailsService());
+    }
+```
+
+当然，用于在Security的代码中，只要在代码中存在UserDetailsService，就会不会使用默认的，并且会自动把自己创建的UserDetailsService给赋值给工厂中默认创建有AuthenticationManager。
+
+以此，只需要在代码中自己注入一个UserDetailsService的实现，就可以，**不需要上面的代码。改为自己注入一个UserDetailsService的实现**
+
+```java
+ //注入一个  自己UserDetailsService实现
+@Bean
+public UserDetailsService userDetailsService(){
+    //创建一个基于内存的数据源，当然也可以创建其他的数据源
+    InMemoryUserDetailsManager userDetailsService = new InMemoryUserDetailsManager();
+    userDetailsService.createUser(User.withUsername("user").password("{noop}123").roles("admin").build());
+        return userDetailsService;
+    }
+```
+
+**方法二：** 自定义AuthenticationManager,如果有自定义的，则就会默认覆盖掉默认的
+
+```java
+//自定义AuthenticationManager,如果有自定义的，则就会默认覆盖掉默认的,必须自己传入UserDetailsService实现
+@Override
+public void configure(AuthenticationManagerBuilder builder) throws Exception {
+        System.out.println("自定义AuthenticationManager："+builder);
+        builder.userDetailsService("传入UserDetailsService实现");
+}
+```
+
+
+
+
+
