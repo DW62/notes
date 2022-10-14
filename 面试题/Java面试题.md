@@ -434,6 +434,18 @@ NIO：同步非阻塞式IO，是传统IO的升级，客户端和服务端通过C
 
 AIO：也交NIO2是NIO的升级，实现了异步非阻塞IO，异步IO操作基于事件和回调机制。
 
+### Java中NIO使用
+
+> 传统的IO操作面向数据流，意味着每一次从流中读取一个或者多个字节，直至完成，数据没有被缓存到任何地方。
+
+NIO操作是面向缓冲区的，数据从Channel读取到Buffer缓冲区，随后，在Buffer中处理数据。
+
+BIO中的accept是没有客户端连接时阻塞，NIO的accept是没有客户端连接时立即返回。
+
+NIO的三个重要组件：Buffer、Channel、Selector
+
+Buffer是用于容纳数据缓冲区，Channel是与IO设备之间的连接，类似于流、Seletor是Channel的多路复用器。
+
 ### session和cookie区别
 
 > cookie是Web服务器发送给浏览器的一块信息。浏览器会在本地文件中给每一个Web服务器存储cookie。以后浏览器在给特定的Web服务器发请求的时候，同时会发送所有为该服务器存储cookie。
