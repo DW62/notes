@@ -446,6 +446,10 @@ NIO的三个重要组件：Buffer、Channel、Selector
 
 Buffer是用于容纳数据缓冲区，Channel是与IO设备之间的连接，类似于流、Seletor是Channel的多路复用器。
 
+**Buffer(缓冲区)**
+
+clear是将position置为0，limit置为capacity，flip是将limit置为position，position置为0
+
 ### session和cookie区别
 
 > cookie是Web服务器发送给浏览器的一块信息。浏览器会在本地文件中给每一个Web服务器存储cookie。以后浏览器在给特定的Web服务器发请求的时候，同时会发送所有为该服务器存储cookie。
@@ -672,6 +676,10 @@ Files.write()：写入文件
 
 ![img](https://img-blog.csdnimg.cn/20190727183756962.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3FxXzM1NzcxMjY2,size_16,color_FFFFFF,t_70)
 
+> list 元素是有序的，可重复的；set元素是无序的，不可重复的。
+
+
+
 ### Collection和Collections有什么区别？
 
 Collection是一个集合接口，它提供了对集合对象进行基本操作的通用接口方法，所以集合都是它的子类，比如List、set等
@@ -796,3 +804,6 @@ Exception是程序本身出现可以处理的异常，这种异常分两大类�
 * RuntimeException是运行时异常，也称为非检查异常
 * 非RuntimeException也称CheckedException受检异常
 * 前者可以不必进行try-catch，后者必须进行try-catch或throw
+
+### 
+
