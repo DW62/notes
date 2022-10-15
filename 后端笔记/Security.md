@@ -761,6 +761,24 @@ public void configure(AuthenticationManagerBuilder builder) throws Exception {
 }
 ```
 
+自定义AuthenticationManager总结：
+1. 一旦通过configure方法自定义AuthenticationManager实现就会将工厂中自动配置AuthenticationManager进行覆盖。
+2. 一旦通过configure方法自定义AuthenticationManager实现需要在实现中指定认证数据源对象UserDetaiService实例。
+3. 一旦通过 configure方法自定义AuthenticationManager实现这种方式创建AuthenticationManager对象工厂内部本地一个AuthenticationManager对象不允许在其他自定义组件中进行注入。
+
+**在工厂中暴露AuthenticationManager解决方法：**
+
+```java
+//将自定义的AuthenticationManager在工厂中进行暴露，暴露之后就可以在位置注入AuthenticationManager
+    @Override
+	@Bean
+    public AuthenticationManager authenticationManagerBean() throws Exception {
+        return super.authenticationManagerBean();
+    }
+```
+
+### 实现通过数据库登录
+
 
 
 
