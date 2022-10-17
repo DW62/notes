@@ -678,7 +678,21 @@ Files.write()：写入文件
 
 > list 元素是有序的，可重复的；set元素是无序的，不可重复的。
 
+### List、Set、Map之间的区别是什么？
 
+List、Set、Map的主要区别体现在：元素是否有序、是否允许重复。
+
+1. List集合中对象按照索引位置进行排序，可以有重复对象，允许按照对象在集合中的索引位置检索对象，例如通过list.git(i)方法来获取集合中的元素；
+2. Map中每一个元素包含一个键和一个值，成对出现，键对象不可重复，值对象可以重复。
+3. Set集合中的对象不按照特定的方法进行排序，并且没有重复对象，但它的实现类能对集合中的对象按照特定的方法排序，例如Tree Set类，可以按照默认顺序，也可以通过实现Java.util.Comparator< Type >接口来自定义排序方式。 
+
+### HashMap和Hashtable有什么区别？
+
+存储：HashMap允许一个key和多个不同的key对应的value为null，而hashtable不允许key或者value为空。
+
+线程安全：Hashtable是线程安全的，而HashMap是非线程安全的。
+
+推荐使用：在Hashtable的类注释可以看到，Hashtable是保留类不建议使用，推荐在单线程环境下使用HashMap替代，如果需要多线程使用则用ConcurrentHashMap
 
 ### Collection和Collections有什么区别？
 
