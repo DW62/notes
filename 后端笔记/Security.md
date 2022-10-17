@@ -777,9 +777,355 @@ public void configure(AuthenticationManagerBuilder builder) throws Exception {
     }
 ```
 
-### 实现通过数据库登录
+## 认证实践
 
+### 传统Web项目认证
 
+1. 创建一个SpringBoot项目
+2. 引入依赖，基础依赖
+
+```xml
+ 	<dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+<!--security的依赖-->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
+  <!--引入thymeleaf的依赖-->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-thymeleaf</artifactId>
+        </dependency>
+<!--引入thymeleaf对security扩展的依赖-->
+        <dependency>
+            <groupId>org.thymeleaf.extras</groupId>
+            <artifactId>thymeleaf-extras-springsecurity5</artifactId>
+            <version>3.0.4.RELEASE</version>
+        </dependency>
+```
+
+3. 编写配置文件
+
+```yml
+server:
+  port: 8081   #设置端口号
+
+spring:
+  thymeleaf:
+    cache: false #关闭thymeleaf缓存
+    prefix: classpath:/templates/
+    suffix: .html
+    encoding: utf-8
+```
+
+4. 创建security配置类
+
+```java
+@Configuration
+public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
+
+    //自定义配置规则
+    @Override
+    protected void configure(HttpSecurity http) throws Exception {
+        //配置认证规则
+        http.authorizeRequests()
+                .mvcMatchers("/goLogin").permitAll()//放行去登录页面请求
+                .anyRequest().authenticated();//所有请求都需要进行认证
+        //配置认证方式
+        http.formLogin()
+                .loginPage("/goLogin")//指定登录页面
+                .loginProcessingUrl("/doLogin")//指定登录表单请求url
+                .usernameParameter("uanme")//指定登录表单用户名的name值
+                .passwordParameter("passwd")//指定登录表单密码的name值
+                .defaultSuccessUrl("/goIndex")//指定登录成功后跳转的url
+                ;
+        //关闭csrf
+        http.csrf().disable();
+    }
+}
+```
+
+5. 根据security配置类来创建一个MVC配置类，将需要使用的controller和页面进行绑定
+
+```java
+@Configuration
+public class MvcConfig implements WebMvcConfigurer {
+    @Override
+    public void addViewControllers(ViewControllerRegistry registry) {
+        //添加视图和定义的控制器
+        registry.addViewController("/goLogin").setViewName("login");
+        registry.addViewController("/goIndex").setViewName("index");
+    }
+}
+```
+
+6. 根据security配置类和MVC配置来创建需要的页面
+
+​			登录页面：
+
+```html
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns="http://www.w3.org/1999/html">
+<head>
+    <meta charset="UTF-8">
+    <title>登录页面</title>
+</head>
+<body>
+    <h1>用户登录</h1>
+    <form method="post" th:action="@{/doLogin}">
+        用户名：<input name="uanme" type="text"></br>
+        密码：<input name="passwd" type="text"></br>
+        <input type="submit" value="登录">
+    </form>
+</body>
+</html>
+```
+
+​			index页面
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>首页</title>
+</head>
+<body>
+    <h1>首页</h1>
+</body>
+</html>
+```
+
+7. 登录成功后可以从代码中直接在SecurityContextHolder中获取登录用户的信息
+
+```java
+ @GetMapping("/getUserInfo")
+    public String getUserInfo() {
+        //1.登录成功后，用户的数据会存放到SecurityContextHolder中
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        //获取用户数据
+        User user = (User) authentication.getPrincipal();
+        System.out.println("用户名："+user.getUsername());
+        System.out.println("密码："+user.getPassword());
+        System.out.println("用户权限信息："+user.getAuthorities());
+        return "";
+    }
+```
+
+从页面获取登录用户信息，默认thymeleaf无法获取security用户信息，可以在页面引入thymeleaf对security扩展的依赖的命名就可以获取。修改index页面获取用户信息
+
+```html
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <title>首页</title>
+</head>
+<body>
+    <h1>首页</h1>
+    <ul>
+        <li sec:authentication="principal.username"></li>
+        <li sec:authentication="principal.authorities"></li>
+        <li sec:authentication="principal.accountNonExpired"></li>
+        <li sec:authentication="principal.accountNonLocked"></li>
+        <li sec:authentication="principal.credentialsNonExpired"></li>
+    </ul>
+</body>
+</html>
+```
+
+8. 配置退出登录，在security配置中添加
+
+```java
+ //配置退出登录
+        http.logout()
+                .logoutUrl("/logout")//配置退出登录url
+                .logoutSuccessUrl("/goLogin");//配置退出登录成功后的跳转
+```
+
+在首页添加退出连接
+
+```html
+ <a th:href="@{/logout}">退出登录</a>
+```
+
+9. 自定义数据源
+
+使用自定义的自定义AuthenticationManager，来说明数据源。在security配置类中自定义AuthenticationManager
+
+```java
+//自定义AuthenticationManager,如果有自定义的，则就会默认覆盖掉默认的
+    @Override
+    public void configure(AuthenticationManagerBuilder builder) throws Exception {
+        System.out.println("自定义AuthenticationManager："+builder);
+        builder.userDetailsService(myUserDetailsService);
+    }
+```
+
+**配置基于内存的数据源**，在security配置类中自定义内存的UserDetailsService
+
+```java
+   @Bean
+    public UserDetailsService userDetailsService(){
+        //创建一个基于内存的数据源，当然也可以创建其他的数据源
+        InMemoryUserDetailsManager userDetailsService = new InMemoryUserDetailsManager();
+        userDetailsService.createUser(User.withUsername("user").password("{noop}123").roles("admin").build());
+        return userDetailsService;
+    }
+```
+
+**配置基于数据的数据源**
+
+添加依赖
+
+```xml
+<!--mysql依赖-->
+        <dependency>
+            <groupId>mysql</groupId>
+            <artifactId>mysql-connector-java</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <!--mybatis-plus依赖-->
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-boot-starter</artifactId>
+            <version>3.5.0</version>
+        </dependency>
+        <!--lombok依赖-->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
+        </dependency>
+```
+
+添加数据库连接配置文件
+
+```yml
+spring:
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://39.105.29.9:3306/security?serverTimezone=UTC&useUnicode=true&characterEncoding=utf8&useSSL=false
+    username: root
+    password: root
+```
+
+首先自定义实现UserDetailsService接口的loadUserByUsername方法
+
+```java
+/**
+ * 自定义实现根据数据数据登录
+ */
+@Component
+public class MyUserDetailsService  implements UserDetailsService {
+    @Resource
+    private UserInfoService userInfoService;
+
+    @Override
+    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+        //根据用户名查询用户
+        UserInfo userInfo=userInfoService.getOne(new QueryWrapper<UserInfo>().eq("username",username));
+        if (ObjectUtils.isEmpty(userInfo))throw new UsernameNotFoundException("用户不存在！");
+        //根据用户ID查询用户角色信息
+        List<RoleInfo> roles = userInfoService.getRolesByUId(userInfo.getId());
+        return new MyUserDetails(userInfo,roles);
+    }
+}
+```
+
+由于loadUserByUsername方法返回为UserDetails对象，所以还需要自定义实现UserDetails
+
+```java
+public class MyUserDetails implements UserDetails {
+    private UserInfo userInfo;
+    private List<RoleInfo> roles=new ArrayList<>();  //用户角色列表
+    @Override
+    public Collection<? extends GrantedAuthority> getAuthorities() {
+        Set<SimpleGrantedAuthority> authorities=new HashSet<>();
+        roles.forEach(roleInfo -> {
+            SimpleGrantedAuthority simpleGrantedAuthority=new SimpleGrantedAuthority(roleInfo.getRoleKey());
+            authorities.add(simpleGrantedAuthority);
+        });
+        return authorities;
+    }
+
+    @Override
+    public String getPassword() {
+        return userInfo.getPassword();
+    }
+
+    @Override
+    public String getUsername() {
+        return userInfo.getUsername();
+    }
+
+    @Override
+    public boolean isAccountNonExpired() {
+        return true;
+    }
+
+    @Override
+    public boolean isAccountNonLocked() {
+        return true;
+    }
+
+    @Override
+    public boolean isCredentialsNonExpired() {
+        return true;
+    }
+
+    @Override
+    public boolean isEnabled() {
+        return true;
+    }
+
+    public MyUserDetails() {
+    }
+
+    public MyUserDetails(UserInfo userInfo) {
+        this.userInfo = userInfo;
+    }
+
+    public MyUserDetails(UserInfo userInfo, List<RoleInfo> roles) {
+        this.userInfo = userInfo;
+        this.roles = roles;
+    }
+
+    public UserInfo getUserInfo() {
+        return userInfo;
+    }
+
+    public void setUserInfo(UserInfo userInfo) {
+        this.userInfo = userInfo;
+    }
+
+    public List<RoleInfo> getRoles() {
+        return roles;
+    }
+
+    public void setRoles(List<RoleInfo> roles) {
+        this.roles = roles;
+    }
+}
+```
+
+3. 需要将自定义的UserDetailsService声明到Security配置类,使Security不使用默认的查询方式
+
+```java
+//将自定义的UserDetailsService声明,来实现根据数据查询
+    @Resource
+    private MyUserDetailsService myUserDetailsService;
+ //自定义AuthenticationManager,如果有自定义的，则就会默认覆盖掉默认的
+    @Override
+    public void configure(AuthenticationManagerBuilder builder) throws Exception {
+        System.out.println("自定义AuthenticationManager："+builder);
+        builder.userDetailsService(myUserDetailsService);
+    }
+```
 
 
 
