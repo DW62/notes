@@ -970,7 +970,9 @@ public class MvcConfig implements WebMvcConfigurer {
     }
 ```
 
-**配置基于数据的数据源**
+
+
+
 
 添加依赖
 
@@ -1119,5 +1121,140 @@ public class MyUserDetails implements UserDetails {
     }
 ```
 
+### 前后端分离项目实现认证
 
+在security中默认使用的是UsernamePasswordAuthenticationFilter中的attemptAuthentication方法来实现表单认证，但是该方法获取请求参数是从登录表单中获取用户认证参数，但是在前端后端分离项目中，前端给后端的数据封装在json中，默认的UsernamePasswordAuthenticationFilter中的attemptAuthentication方法就无法获取用户认证的数据，所有需要自定义类来实现UsernamePasswordAuthenticationFilter并重写attemptAuthentication方法，来获取认证数据进行认证,来实现前后端分离项目认证
+
+**自定义实现前后端分离的认证Filter**
+
+```java
+public class LoginFilter extends UsernamePasswordAuthenticationFilter {
+
+    @Override
+    public Authentication attemptAuthentication(HttpServletRequest request, HttpServletResponse response) throws AuthenticationException {
+        //1.判断请求方式是否的post
+        if (!request.getMethod().equals("POST")) {
+            throw new AuthenticationServiceException("不支持身份验证方法: " + request.getMethod());
+        }
+        //2.判断是否是json格式的请求
+        if(request.getContentType().equalsIgnoreCase(MediaType.APPLICATION_JSON_VALUE)){
+            //3.从json数据中获取用户名和密码进行认证
+            try {
+                //将请求中的json数据进行序列化为map对象
+                Map<String, String>  userInfo= new ObjectMapper().readValue(request.getInputStream(), Map.class);
+                //获取请求中的用户名数据
+                String username = userInfo.get(getUsernameParameter());
+                String password = userInfo.get(getPasswordParameter());
+                System.out.println("用户名："+username+"密码："+password);
+                //仿照security默认的UsernamePasswordAuthenticationFilter将用户名和密码封装到UsernamePasswordAuthenticationToken
+                UsernamePasswordAuthenticationToken authRequest = new UsernamePasswordAuthenticationToken(username, password);
+                setDetails(request, authRequest);
+                return this.getAuthenticationManager().authenticate(authRequest);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        return super.attemptAuthentication(request,response);
+    }
+}
+```
+
+在seucurity配置类中完成配置实现认证
+
+```java
+@Configuration
+public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
+    //设置内存用户数据
+    @Bean
+    public UserDetailsService userDetailsService(){
+        InMemoryUserDetailsManager inMemoryUserDetailsManager=new InMemoryUserDetailsManager();
+        inMemoryUserDetailsManager.createUser(User.withUsername("123").password("{noop}123").roles("admin").build());
+        return inMemoryUserDetailsManager;
+    }
+    //自定义AuthenticationManager
+    @Override
+    protected void configure(AuthenticationManagerBuilder auth) throws Exception {
+        auth.userDetailsService(userDetailsService());
+    }
+    //默认AuthenticationManager是需要进行暴露处理，才可以使用
+    @Override
+    @Bean
+    public AuthenticationManager authenticationManagerBean() throws Exception {
+        return super.authenticationManagerBean();
+    }
+
+    //注入自定义的实现前后端分离的认证file
+    @Bean
+    public LoginFilter loginFilter() throws Exception {
+        LoginFilter loginFilter=new LoginFilter();
+        //设置进行认证的url
+        loginFilter.setFilterProcessesUrl("/securityLogin");
+        //设置认证json中的用户名的key
+        loginFilter.setUsernameParameter("username");
+        //设置认证json中的密码的key
+        loginFilter.setPasswordParameter("password");
+        //设置实现认证的AuthenticationManager,这里设置为自定义的AuthenticationManager
+        loginFilter.setAuthenticationManager(authenticationManagerBean());
+        //设置认证成功后的处理
+        loginFilter.setAuthenticationSuccessHandler((req,resp,authentication)->{
+            Map<String,Object> result=new HashMap<String,Object>();
+            result.put("msg","登陆成功");
+            result.put("用户信息",authentication.getPrincipal());
+            resp.setContentType("application/json;charset=UTF-8");
+            resp.setStatus(HttpStatus.OK.value());//设置请求成功后的状态
+            String s = new ObjectMapper().writeValueAsString(result);
+            resp.getWriter().println(s);
+        });
+        //设置认证是吧后的处理
+        loginFilter.setAuthenticationFailureHandler((req,resp,ex)->{
+            Map<String,Object> result=new HashMap<String,Object>();
+            result.put("msg","登陆失败："+ex.getMessage());
+            resp.setContentType("application/json;charset=UTF-8");
+            resp.setStatus(HttpStatus.INTERNAL_SERVER_ERROR.value());//设置请求失败后的状态
+            String s = new ObjectMapper().writeValueAsString(result);
+            resp.getWriter().println(s);
+        });
+        return loginFilter;
+    };
+    //自定义security配置
+    @Override
+    protected void configure(HttpSecurity http) throws Exception {
+        //授权配置
+        http.authorizeHttpRequests()
+                .anyRequest().authenticated();//所有请求都需要进行认证
+        //配置认证方式
+        http.formLogin();
+        //配置退出设置
+        http.logout()
+                .logoutUrl("/logout")//设置退出代理请求url，默认git /logout
+                .logoutSuccessHandler((req,resp,authentication)->{
+                    Map<String,Object> result=new HashMap<String,Object>();
+                    result.put("msg","注销成功");
+                    result.put("用户信息",authentication.getPrincipal());
+                    resp.setContentType("application/json;charset=UTF-8");
+                    resp.setStatus(HttpStatus.OK.value());//设置请求成功后的状态
+                    String s = new ObjectMapper().writeValueAsString(result);
+                    resp.getWriter().println(s);
+                });//设置退出后处理
+        //设置异常处理
+        http.exceptionHandling()
+                .authenticationEntryPoint((req,resp,ex)->{
+                    resp.setContentType(MediaType.APPLICATION_JSON_UTF8_VALUE);//设置响应类型为json
+                    resp.setStatus(HttpStatus.UNAUTHORIZED.value());//设置未认证状态
+                    resp.getWriter().println("请认证之后在去处理");
+                });//设置为授权异常处理
+        //关闭csrf
+        http.csrf().disable();
+        //配置过滤器链
+        //将UsernamePasswordAuthenticationFilter过滤器替换为自定义的
+        http.addFilterAt(loginFilter(), UsernamePasswordAuthenticationFilter.class);
+    }
+}
+```
+
+此时就可以实现前后端分离的基于内存数据的认证
+
+**将内存数据替换为数据库数据**
+
+和传统Web项目认证中转化为数据库数据方法一样。
 
