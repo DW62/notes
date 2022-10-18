@@ -970,10 +970,6 @@ public class MvcConfig implements WebMvcConfigurer {
     }
 ```
 
-
-
-
-
 添加依赖
 
 ```xml
@@ -1258,3 +1254,198 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
 
 和传统Web项目认证中转化为数据库数据方法一样。
 
+## 添加验证码
+
+### 传统web项目添加验证码
+
+引入谷歌开源的kaptcha生成验证码依赖
+
+```xml
+<dependency>
+      <groupId>com.github.penggle</groupId>
+      <artifactId>kaptcha</artifactId>
+      <version>2.3.2</version>
+</dependency>
+```
+
+创建kaptcha的配置类
+
+```java
+@Configuration
+public class KaptchaConfig {
+    @Bean
+    public Producer kaptcha(){
+        Properties properties=new Properties();
+        //设置验证码的宽度
+        properties.setProperty("Kaptcha.image.width","150");
+        //设置验证码的高度
+        properties.setProperty("Kaptcha.image.height","50");
+        //设置验证码展示的字
+        properties.setProperty("Kaptcha.textoroducer.char.string","012345678");
+        //设置验证码的长度
+        properties.setProperty("Kaptcha.textoroducer.char.length","4");
+        Config config=new Config(properties);
+        DefaultKaptcha defaultKaptcha=new DefaultKaptcha();
+        defaultKaptcha.setConfig(config);
+        return defaultKaptcha;
+    }
+}
+```
+
+创建一个controller请求来生成验证码并返回
+
+```java
+@Controller
+public class VerifyCodeController {
+    //注入配置了
+    @Resource
+    private  Producer producer;
+
+    @RequestMapping("/getVc")
+    public void verifyCode(HttpServletResponse response, HttpSession session) throws IOException {
+        //生成验证码
+        String verifyCode = producer.createText();
+        //保存生成的验证码，session或者redis中都可以
+        session.setAttribute("kaptcha",verifyCode);
+        //生成图片
+        BufferedImage image = producer.createImage(verifyCode);
+        //响应验证码
+        response.setContentType("image/jpg");//设置响应类型
+        ServletOutputStream os = response.getOutputStream();
+        ImageIO.write(image,"jpg",os);
+    }
+}
+```
+
+生成验证码的请求不需要进行认证就可以访问，所以还需要将该请求进行放行。
+
+在页面添加验证码生成
+
+```html
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns="http://www.w3.org/1999/html">
+<head>
+    <meta charset="UTF-8">
+    <title>登录页面</title>
+</head>
+<body>
+    <h1>用户登录</h1>
+    <form method="post" th:action="@{/doLogin}">
+        用户名：<input name="uanme" type="text"></br>
+        密码：<input name="passwd" type="text"></br>
+        验证码：<input name="kaptcha" type="text"> <img th:src="@{/getVc}"><br>
+        <input type="submit" value="登录">
+    </form>
+</body>
+</html>
+```
+
+自定义一个验证码的认证过滤器，使其替换UsernamePasswordAuthenticationFilter，使其先进行验证码的认证，在进行用户名和密码的认证。
+
+```java
+public class KcptchaFilter extends UsernamePasswordAuthenticationFilter {
+    //定义一个静态常量来表示表单验证码的name属性值
+    private static final String FROM_KAPTCHA_KEY="kaptcha";
+    private String kaptchaParamerter=FROM_KAPTCHA_KEY;
+
+    public String getKaptchaParamerter() {
+        return kaptchaParamerter;
+    }
+
+    public void setKaptchaParamerter(String kaptchaParamerter) {
+        this.kaptchaParamerter = kaptchaParamerter;
+    }
+
+    @Override
+    public Authentication attemptAuthentication(HttpServletRequest request, HttpServletResponse response) throws AuthenticationException {
+        //1判断请求方式是否为post
+        if(!request.getMethod().equals("POST")){
+            throw new AuthenticationServiceException("请求方式必须为POST");
+        }
+        //从请求中获取验证码
+        String verifyCode = request.getParameter(getKaptchaParamerter());
+        //获取保存的验证码
+        String sessionVerifyCode = (String) request.getSession().getAttribute("kaptcha");
+        //进行比较
+        if (!ObjectUtils.isEmpty(verifyCode) && !ObjectUtils.isEmpty(sessionVerifyCode) && verifyCode.equalsIgnoreCase(sessionVerifyCode)){
+            //如果用户传来的验证码和保存的一致，则之间执行父类的认证
+            return super.attemptAuthentication(request, response);
+        }
+        throw new KaptchaNotMatchException("验证码不匹配！");
+    }
+}
+```
+
+自定义一个验证码错误的异常
+
+```java
+public class KaptchaNotMatchException extends AuthenticationException {
+    public KaptchaNotMatchException(String msg, Throwable cause) {
+        super(msg, cause);
+    }
+    public KaptchaNotMatchException(String msg) {
+        super(msg);
+    }
+}
+```
+
+修改security配置类使其自定义的验证码认证过滤器替换UsernamePasswordAuthenticationFilter
+
+```java
+//注入认证管理器,必须之间注入
+    @Override
+    @Bean
+    public AuthenticationManager authenticationManagerBean() throws Exception {
+        return super.authenticationManagerBean();
+    }
+//注入自定义验证码验证过滤器
+	@Bean
+    public KcptchaFilter kcptchaFilter() throws Exception {
+        KcptchaFilter kcptchaFilter=new KcptchaFilter();
+        //设置认证请求地址
+        kcptchaFilter.setFilterProcessesUrl("/doLogin");
+        //设置认证用户名的name
+        kcptchaFilter.setUsernameParameter("uanme");
+        //设置认证密码的name
+        kcptchaFilter.setPasswordParameter("passwd");
+        //设置验证码的name
+        kcptchaFilter.setKaptchaParamerter("kaptcha");
+        //指定认证管理器
+        kcptchaFilter.setAuthenticationManager(authenticationManagerBean());
+        //指定认证成功处理器
+        kcptchaFilter.setAuthenticationSuccessHandler((req,resp,auth)->{
+            resp.sendRedirect("/goIndex");
+        });
+        //指定认证失败处理
+        kcptchaFilter.setAuthenticationFailureHandler((req,resp,ex)->{
+            resp.sendRedirect("/goLogin");
+        });
+        return kcptchaFilter;
+    }
+```
+
+configure(HttpSecurity http)方法配置
+
+```Java
+//自定义配置规则
+    @Override
+    protected void configure(HttpSecurity http) throws Exception {
+        //配置认证规则
+        http.authorizeRequests()
+                .mvcMatchers("/goLogin").permitAll()//放行去登录页面请求
+                .mvcMatchers("/getVc").permitAll()//放行生成验证码请求
+                .anyRequest().authenticated();//所有请求都需要进行认证
+        //配置认证方式
+        http.formLogin()
+                .loginPage("/goLogin")//指定登录页面
+                ;
+        //配置退出登录
+        http.logout()
+                .logoutUrl("/logout")//配置退出登录url
+                .logoutSuccessUrl("/goLogin");//配置退出登录成功后的跳转
+        //配置过滤器
+        http.addFilterAt(kcptchaFilter(), UsernamePasswordAuthenticationFilter.class);
+        //关闭csrf
+        http.csrf().disable();
+    }
+```
