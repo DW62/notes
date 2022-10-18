@@ -690,20 +690,12 @@ ProviderManager 是AuthenticationManager的唯一实现， 也是Spring Security
 
 ![image-20221014154924239](https://raw.githubusercontent.com/DW62/ImgStg/master/202210141549320.png)
 
-​		在Spring Seourity中，允许系统同时支持多种不同的认证方式，例如同时支持用户名/密
-码认证、RememberMe 认证、手机号码动态认证等，而不同的认证方式对应了不同的AuthenticationProvider，所以一个完整的认证流程 可能由多个AuthenticationProvider来提
-供。
-​		多个AuthenticationProvider将组成一个列表， 这个列表将由ProviderManager 代理。换句
-话说，在ProviderManager 中存在一个AuthenticationProvider列表，在Provider Manager中
-遍历列表中的每一个AuthenticationProvider 去执行身份认证，最终得到认证结果。
+​		在Spring Seourity中，允许系统同时支持多种不同的认证方式，例如同时支持用户名/密码认证、RememberMe 认证、手机号码动态认证等，而不同的认证方式对应了不同的AuthenticationProvider，所以一个完整的认证流程 可能由多个AuthenticationProvider来提供。
+​		多个AuthenticationProvider将组成一个列表， 这个列表将由ProviderManager 代理。换句话说，在ProviderManager 中存在一个AuthenticationProvider列表，在Provider Manager中遍历列表中的每一个AuthenticationProvider 去执行身份认证，最终得到认证结果。
 
-​		ProviderManager本身也可以再配置一个AuthenticationManager作为parent(父类)，这样当
-ProviderManager认证失败之后，就可以进入到parent(父类)中再次进行认证。理论上来说，
-ProviderManager的parent可以是任意类型的AuthenticationManager，但是通常都是由ProviderManager来扮演parent的角色，也就是ProviderManager 是ProviderManager的
-parent(父类)。
+​		ProviderManager本身也可以再配置一个AuthenticationManager作为parent(父类)，这样当ProviderManager认证失败之后，就可以进入到parent(父类)中再次进行认证。理论上来说，ProviderManager的parent可以是任意类型的AuthenticationManager，但是通常都是由ProviderManager来扮演parent的角色，也就是ProviderManager 是ProviderManager的parent(父类)。
 
-​		ProviderManager本身也可以有多个，多个ProviderManager 共用同一个parent。有时，一
-个应用程序有受保护资源的逻辑组(例如，所有符合路径模式的网络资源，如/api**) ，每个组可以有自己的专用AuthenticationManager。通常每个组都是一个ProviderManager，它们共享一个父级。然后父级是一种全局资源，作为所有提供者的后备资源。
+​		ProviderManager本身也可以有多个，多个ProviderManager 共用同一个parent。有时，一个应用程序有受保护资源的逻辑组(例如，所有符合路径模式的网络资源，如/api**) ，每个组可以有自己的专用AuthenticationManager。通常每个组都是一个ProviderManager，它们共享一个父级。然后父级是一种全局资源，作为所有提供者的后备资源。
 
 ​		根据上面的介绍，我们绘出新的AuthenticationManager. ProvideManager 和AuthentictionProvider关系
 

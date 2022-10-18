@@ -694,6 +694,14 @@ List、Set、Map的主要区别体现在：元素是否有序、是否允许重�
 
 推荐使用：在Hashtable的类注释可以看到，Hashtable是保留类不建议使用，推荐在单线程环境下使用HashMap替代，如果需要多线程使用则用ConcurrentHashMap
 
+### 如何决定使用HashMap还是TreeMap
+
+对于在Map中插入、删除、定位一个元素这类操作，HashMap是最好的选择，因为相对而言HashMap的插入会更快，但是如果对一个key集合进行有序遍历，那么TreeMap是更好的选择。
+
+### 说一下HashMap的实现原理
+
+HashMap基于Hash算法实现的，我们通过put(key，value)存储，get(key)来获取。当传入key时，hashMap会根据key.hashCode()计算出hash值，根据hash值将value保存在bucket里。当计算出hash值相同时，我们称之为hash冲突，hashMap的做法是用链表和红黑树存储相同hash值的value。当hash冲突的个数比较少时，使用链表否则使用红黑树。
+
 ### Collection和Collections有什么区别？
 
 Collection是一个集合接口，它提供了对集合对象进行基本操作的通用接口方法，所以集合都是它的子类，比如List、set等
