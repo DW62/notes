@@ -1256,8 +1256,6 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
 
 ## 添加验证码
 
-### 传统web项目添加验证码
-
 引入谷歌开源的kaptcha生成验证码依赖
 
 ```xml
@@ -1291,6 +1289,8 @@ public class KaptchaConfig {
     }
 }
 ```
+
+### 传统web项目添加验证码
 
 创建一个controller请求来生成验证码并返回
 
@@ -1449,3 +1449,186 @@ configure(HttpSecurity http)方法配置
         http.csrf().disable();
     }
 ```
+
+### 前后端分离时的验证码实现
+
+在前后端分离的项目中，后端给前端返回的是json数据，所以需要创建一个生成base64编码验证码的控制器，并且该控制器方法需要进行放行
+
+```java
+/**
+ * 用于生成验证码的控制器
+ */
+@RestController
+public class VerifyCodeController {
+    //注入配置了
+    @Resource
+    private Producer producer;
+
+    @GetMapping("/getVc")
+    public String verifyCode(HttpSession session) throws IOException {
+        //生成验证码
+        String verifyCode = producer.createText();
+        //保存生成的验证码，session或者redis中都可以
+        session.setAttribute("kaptcha",verifyCode);
+        //生成图片,将图片转为Bases64
+        BufferedImage image = producer.createImage(verifyCode);
+        //响应验证码
+        FastByteArrayOutputStream fos = new FastByteArrayOutputStream();
+        ImageIO.write(image,"jpg",fos);
+        return Base64.encodeBase64String(fos.toByteArray());
+    }
+}
+```
+
+生成的base64编码进行转译的时候需要在前面添加上`data:image/png;base64,`
+
+[base64图片在线转换工具 - 站长工具 (chinaz.com)](https://tool.chinaz.com/tools/imgtobase/)
+
+传教自定义认证过滤器，并且在配置类中替换掉UsernamePasswordAuthenticationFilter
+
+```java
+/**
+ * 自定义实现前后端分离的认证Filter
+ */
+public class LoginFilter extends UsernamePasswordAuthenticationFilter {
+    //定义一个静态常量来表示表单验证码的name属性值
+    private static final String FROM_KAPTCHA_KEY="kaptcha";
+    private String kaptchaParamerter=FROM_KAPTCHA_KEY;
+
+    public String getKaptchaParamerter() {
+        return kaptchaParamerter;
+    }
+    public void setKaptchaParamerter(String kaptchaParamerter) {
+        this.kaptchaParamerter = kaptchaParamerter;
+    }
+    @Override
+    public Authentication attemptAuthentication(HttpServletRequest request, HttpServletResponse response) throws AuthenticationException {
+        //1.判断请求方式是否的post
+        if (!request.getMethod().equals("POST")) {
+            throw new AuthenticationServiceException("不支持身份验证方法: " + request.getMethod());
+        }
+        //2.判断是否是json格式的请求
+        if(request.getContentType().equalsIgnoreCase(MediaType.APPLICATION_JSON_VALUE)){
+            //3.从json数据中获取用户名和密码进行认证
+            try {
+                //将请求中的json数据进行序列化为map对象
+                Map<String, String>  userInfo= new ObjectMapper().readValue(request.getInputStream(), Map.class);
+                //获取请求中的用户名数据
+                String username = userInfo.get(getUsernameParameter());
+                String password = userInfo.get(getPasswordParameter());
+                //获取请求中的验证码
+                String verifyCode = userInfo.get(getKaptchaParamerter());
+                System.out.println("用户名："+username+"密码："+password+"验证码："+verifyCode);
+                //获取保存的验证码
+                String sessionVerifyCode = (String) request.getSession().getAttribute("kaptcha");
+                //进行比较
+                if (!ObjectUtils.isEmpty(verifyCode) && !ObjectUtils.isEmpty(sessionVerifyCode) && verifyCode.equalsIgnoreCase(sessionVerifyCode)){
+                    //仿照security默认的UsernamePasswordAuthenticationFilter将用户名和密码封装到UsernamePasswordAuthenticationToken
+                    UsernamePasswordAuthenticationToken authRequest = new UsernamePasswordAuthenticationToken(username, password);
+                    setDetails(request, authRequest);
+                    return this.getAuthenticationManager().authenticate(authRequest);
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        throw new KaptchaNotMatchException("验证码或用户名密码错误！");
+    }
+}
+```
+
+```java
+/**
+ * Security配置类
+ */
+@Configuration
+public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
+
+    //设置基于数据库的数据
+    @Resource
+    private MyUserDetailsService myUserDetailsService;
+    //自定义AuthenticationManager
+    @Override
+    protected void configure(AuthenticationManagerBuilder auth) throws Exception {
+
+        auth.userDetailsService(myUserDetailsService);
+    }
+    //默认AuthenticationManager是需要进行暴露处理，才可以使用
+    @Override
+    @Bean
+    public AuthenticationManager authenticationManagerBean() throws Exception {
+        return super.authenticationManagerBean();
+    }
+
+    //注入自定义的实现前后端分离的认证file
+    @Bean
+    public LoginFilter loginFilter() throws Exception {
+        LoginFilter loginFilter=new LoginFilter();
+        //设置进行认证的url
+        loginFilter.setFilterProcessesUrl("/securityLogin");
+        //设置认证json中的用户名的key
+        loginFilter.setUsernameParameter("username");
+        //设置认证json中的密码的key
+        loginFilter.setPasswordParameter("password");
+        //设置认证json中的验证码的key
+        loginFilter.setKaptchaParamerter("verify");
+        //设置实现认证的AuthenticationManager,这里设置为自定义的AuthenticationManager
+        loginFilter.setAuthenticationManager(authenticationManagerBean());
+        //设置认证成功后的处理
+        loginFilter.setAuthenticationSuccessHandler((req,resp,authentication)->{
+            Map<String,Object> result=new HashMap<String,Object>();
+            result.put("msg","登陆成功");
+            result.put("用户信息",authentication.getPrincipal());
+            resp.setContentType("application/json;charset=UTF-8");
+            resp.setStatus(HttpStatus.OK.value());//设置请求成功后的状态
+            String s = new ObjectMapper().writeValueAsString(result);
+            resp.getWriter().println(s);
+        });
+        //设置认证是吧后的处理
+        loginFilter.setAuthenticationFailureHandler((req,resp,ex)->{
+            Map<String,Object> result=new HashMap<String,Object>();
+            result.put("msg","登陆失败："+ex.getMessage());
+            resp.setContentType("application/json;charset=UTF-8");
+            resp.setStatus(HttpStatus.INTERNAL_SERVER_ERROR.value());//设置请求失败后的状态
+            String s = new ObjectMapper().writeValueAsString(result);
+            resp.getWriter().println(s);
+        });
+        return loginFilter;
+    };
+    //自定义security配置
+    @Override
+    protected void configure(HttpSecurity http) throws Exception {
+        //授权配置
+        http.authorizeHttpRequests()
+                .mvcMatchers("/getVc").permitAll()//放行生成验证码请求
+                .anyRequest().authenticated();//所有请求都需要进行认证
+        //配置认证方式
+        http.formLogin();
+        //配置退出设置
+        http.logout()
+                .logoutUrl("/logout")//设置退出代理请求url，默认git /logout
+                .logoutSuccessHandler((req,resp,authentication)->{
+                    Map<String,Object> result=new HashMap<String,Object>();
+                    result.put("msg","注销成功");
+                    result.put("用户信息",authentication.getPrincipal());
+                    resp.setContentType("application/json;charset=UTF-8");
+                    resp.setStatus(HttpStatus.OK.value());//设置请求成功后的状态
+                    String s = new ObjectMapper().writeValueAsString(result);
+                    resp.getWriter().println(s);
+                });//设置退出后处理
+        //设置异常处理
+        http.exceptionHandling()
+                .authenticationEntryPoint((req,resp,ex)->{
+                    resp.setContentType(MediaType.APPLICATION_JSON_UTF8_VALUE);//设置响应类型为json
+                    resp.setStatus(HttpStatus.UNAUTHORIZED.value());//设置未认证状态
+                    resp.getWriter().println("请认证之后在去处理");
+                });//设置为授权异常处理
+        //关闭csrf
+        http.csrf().disable();
+        //配置过滤器链
+        //将UsernamePasswordAuthenticationFilter过滤器替换为自定义的
+        http.addFilterAt(loginFilter(), UsernamePasswordAuthenticationFilter.class);
+    }
+}
+```
+
