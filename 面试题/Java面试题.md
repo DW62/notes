@@ -702,6 +702,20 @@ List、Set、Map的主要区别体现在：元素是否有序、是否允许重�
 
 HashMap基于Hash算法实现的，我们通过put(key，value)存储，get(key)来获取。当传入key时，hashMap会根据key.hashCode()计算出hash值，根据hash值将value保存在bucket里。当计算出hash值相同时，我们称之为hash冲突，hashMap的做法是用链表和红黑树存储相同hash值的value。当hash冲突的个数比较少时，使用链表否则使用红黑树。
 
+### 说一下HashSet实现原理
+
+HashSet是基于HashMap实现的，HashSet底层使用HashMap来保存所有元素，因此HashSet的实现比较简单，相关HashSet的操作，基本上都是直接调用底层HashMap的相关方法来完成，HashSet不允许重复的值。
+
+### ArrayList和LinkedList的区别是什么
+
+数据解构实现：ArrayList是动态数组的数据结构实现，而Linked List是双链表的数据结构实现。
+
+数据访问效率：Array List比LinkedList在随机访问时效率高，因为linkedList是线性的数据存储，所以需要移动指针从前向后以此查找。
+
+增加和删除效率：在非首尾的增加和删除操作，LinkedList要比ArrayList效率高，因为ArrayList增删操作要影响数组内其他数据的下标。
+
+综合来说：在需要频繁读取集合元素时，更推荐使用ArrayList，而在频繁插入和删除更推荐LinkedList。
+
 ### Collection和Collections有什么区别？
 
 Collection是一个集合接口，它提供了对集合对象进行基本操作的通用接口方法，所以集合都是它的子类，比如List、set等
