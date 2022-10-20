@@ -1632,3 +1632,97 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
 }
 ```
 
+## 密码加密
+
+通过对认证流程源码分析得知，实际密码比较是由PasswordEncoder完成的，因此只需要使用PasswordEncoder不同实现就可以实现不同方式加密。
+
+```java
+public interface PasswordEncoder {
+    String encode(CharSequence rawPassword);
+
+    boolean matches(CharSequence rawPassword, String encodedPassword);
+
+    default boolean upgradeEncoding(String encodedPassword) {
+        return false;
+    }
+}
+```
+
+* encode 用来进行明文加密的
+* matches用来比较密码的方法
+* upgradeEncoding 用来给密码进行升级的方法
+
+**方法一：**
+
+根据Security的代码可以知道，如果想要对密码进行加密，直接在工厂中注入一个PasswoedEncoder，PasswoedEncoder返回那种加密方式就会使用那种加密方法
+
+```java
+    //设置加密方式
+    @Bean
+    public PasswordEncoder passwordEncoder(){
+        //返回那种加密类型，就使用那种方法进行加密
+        return new BCryptPasswordEncoder();
+    }
+```
+
+**方法二：**
+
+可以直接在用户密码前面添加加密的标志，例如
+
+```text
+密码前面加上{noop}  ，表示不加密
+密码前面加上{MD5}表示使用MD5加密
+密码前面加上{bcrypt},表示使用BCryptPasswordEncoder加密
+... 
+如果要使用这种方法进行加密推荐使用{bcrypt}
+```
+
+> 密码加密推荐使用第二种，第二种加密方法适用于多种加密方法，并且第二种加密方法更方便对密码加密方法进行升级，并且支持使用security提供的密码升级方法
+
+**密码升级**
+
+> 如果使用第一种加密方法，则需要直接手动进行升级。
+
+使用第二种加密方法，对密码进行升级
+
+只需要在原来自定义的MyUserDetailsService在使用UserDetailsService接口的基础上在实现UserDetailsPasswordService，并且重写updatePassword方法
+
+```java
+@Component
+public class MyUserDetailsService  implements UserDetailsService, UserDetailsPasswordService {
+    
+    //自动升级密码的方法
+    //参数1为认证成功的用户，此时密码还是升级之前的密码
+    //参数2为使用默认加密方法，进行加密后的新密码
+    @Override
+    public UserDetails updatePassword(UserDetails user, String newPassword) {
+        //1.调用数据库操作，来根据用户名更新密码
+        //2.判断数据库操作是否成功，如果成功则将内存中的用户密码通过set方法进行跟新
+        return 用户
+    }
+}
+```
+
+## 记住我
+
+### 基本使用
+
+中需要在配置中添加上
+
+```jav
+//设置记住我
+http.rememberMe();
+```
+
+就可以实现
+
+### 原理分析
+
+当在SecurityConfig配置中开启 了“记住我"功能之后，在进行认证时如果勾选了“记住我"选项，此时打开浏览器控制台，分析整个登录过程。首先当我们登录时，在登录请求中多了一个RememberMe的参数。很显然，这个参数就是告诉服务器应该开启RememberMe功能的。如果自定义登录页面开启RememberMe功能应该多加入一个一样的请求参数就可以啦。该请求会被RememberMeAuthenticationFilter进行拦截然后自动登录具体参见源码:
+
+1. 请求到达过滤器之后，首先判断SecurityContextHolder中是否有值，没值的话表示用户尚未登录，此时调用autoLogin方法进行自动登录。
+2.  当自动登录成功后返回的rememberMeAuth不为null时，表示自动登录成功，此时调用authenticate方法对key进行校验，并且将登录成功的用户信息保存到SecurityContextHolder对象中，然后调用登录成功回调，并发布登录成功事件。需要注意的是，登录成功的回调并不包含RememberMeServices中的loginSuccess方法。
+3. 如果自动登录失败，则调用remenberMeServices.loginFail方法处理登录失败回调。onUnsuccessfulAuthentication和onSuccesfulAuthentication都是该过滤器中定义的空方法，并没有任何实现这就是RememberMeAuthenticationFilter过滤器所做的事情，成功将RememberMeServices的服务集成进来。
+
+### 传统Web项目实现记住我
+
