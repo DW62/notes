@@ -1875,3 +1875,145 @@ CSRF攻击的根源在于浏览器默认的身份验证机制(自动携带当前
 只需要开启csrf就可以了。
 
 开启CSRF防御后会自动在提交的表单中加入如下代码，如果不能自动加入，需要在开启之后手动加入如下代码，并随着请求提交。获取服务端令牌方式如下:
+
+## 跨域
+
+CORS (Cross-0rigin Resource Sharing )是由W3C制定的一种跨域资源共享技术标准，其目的就是为了解决前端的跨域请求。在JavaEE 开发中，最常见的前端跨域请求解决方案是早期的JSONP，但是JSONP只支持GET请求，这是一个很大的缺陷，而CORS则支特多种HTTTP请求方法，也是目前主流的跨域解决方案。CORS中新增了一组HTTP请求头字段，通过这些字段，服务器告诉浏览器，那些网站通过浏览器有权限访问哪些资源。同时规定，对那些可能修改服务器数据的HTTP请求方法(如GET以外的HTTTP请求等)，浏览器必须首先使用OPTIONS方法发起一个预检请求(prenightst)， 预检请求的目的是查看服务端是否支持即将发起的跨域请求，如果服务端允许,才发送实际的HTTP请求。在预检请求的返回中，服务器端也可以通知客户端，是否需要携带身份凭证(如Cookies. HTTP 认证信息等)。
+
+### Spring跨域解决方案
+
+**方法一：**Spring中第一种处理跨域的方式是通过`@CrossOrigin`注解来标记支持跨域，该注解可以添加在方法上,也可以添加在Controller. 上。当添加在Controller.上时，表示Controller中的所有接口都支持跨域，具体配置如下:
+
+```java
+@RestController
+public Class TestController{
+    @CrossOrigin(origins="http://localhost:8081")
+    @GetMapping("/test")
+    public String test(){
+        return "test";
+    }
+}
+```
+
+@CrossOrigin注解各属性含义如下：
+
+* alowCredentials：浏览器是否应当发送凭证信息，如Cookie。
+* allowedFeaders：请求被允许的请求头宇段，★ 表示所有字段
+* exposedHeaders：哪些响应头可以作为响应的一部分暴露出来。
+  注意，这里只可以一一列举， 通配符★在这里是无效的。
+* maxAge：预检请求的有效期，有效期内不必再次发送预检请求，默认是1800秒。
+* methods: 允许的请求方法，★表示允许所有方法。
+* origins: 允许的域，* 表示允许所有域。
+
+**方法二：**@CrossOrigin注解需要添加在不同的Controller.上。所以还有一种全局配置方法，就是通过重写WebMvcConfigurerComposite#addCorsMappings方法来实现，具体配置如下:
+
+```java
+@Configuration
+public class MvcConfig implements WebMvcConfigurer {
+	//配置跨越
+    @Override
+    public void addCorsMappings(CorsRegistry registry) {
+        registry.addMapping("/**")//对那些请求允许跨域
+                .allowedMethods("*")//允许那些方法进行跨域
+                .allowedOrigins("*")//允许那些来源进行跨域
+                .allowedHeaders("*")//允许那些头
+                .allowCredentials(false)//是否需要传递凭证
+                .exposedHeaders("")//暴露那些头
+                .maxAge(3600)
+        ;
+    }
+}
+```
+
+**方法三：** Cosr Filter是Spring Web中提供的一个处理跨域的过滤器，开发者也可以通过该过该过滤器处理跨域。
+
+```java
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.web.filter.CorsFilter;
+import java.util.Arrays;
+/**
+ * @author: DW @date: 2022/10/21 22:18
+ */
+@Configuration
+public class WebMvcConfig {
+    @Bean
+    FilterRegistrationBean<CorsFilter> corsFilter() {
+        FilterRegistrationBean<CorsFilter> registrationBean=new FilterRegistrationBean<>();
+        CorsConfiguration corsConfiguration = new CorsConfiguration();
+        corsConfiguration.setAllowedOrigins(Arrays.asList("*"));//设置允许那些源允许访问
+        corsConfiguration.setAllowedHeaders(Arrays.asList("*"));//设置允许那些头
+        corsConfiguration.setAllowedMethods(Arrays.asList("*"));//设置允许那些方法
+        corsConfiguration.setMaxAge(3600L);
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", corsConfiguration);
+        registrationBean.setFilter(new CorsFilter(source));
+        registrationBean.setOrder(-1);
+        return registrationBean;
+    }
+}
+```
+
+### SpringSecurity跨域解决
+
+**原理分析：**当我们为项目添加了Spring Security依赖之后，发现上面三种跨域方式有的失效了，有则可以继续使用，这是怎么回事?
+
+通过@CrossOrigin注解或者重写addCorsMappings方法配置跨域，统统失效了，通
+CorsFilter配置的跨域，有没有失效则要看过滤器的优先级，如果过滤器优先级高于Sp
+Security过滤器，即先于Spring Security过滤器执行，则CorsFiter所配置的跨域处理依然有效;如果过滤器优先级低于Spring Security过滤器，则CorsFilter所配置的跨域处理就会失效。
+
+**解决方法：**
+
+首先在配置类中添加
+
+```java
+//配置跨域
+ http.cors()
+            .configurationSource(corsConfigurationSource())//设置跨域的配置
+                ;
+```
+
+在添加对应的跨域设置
+
+```java
+    //跨域配置
+    CorsConfigurationSource corsConfigurationSource(){
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowedOrigins(Arrays.asList("*"));//设置允许的元
+        configuration.setAllowedMethods(Arrays.asList("*"));//设置允许的方法
+        configuration.setAllowedHeaders(Arrays.asList("*"));//设置允许的头
+        configuration.setMaxAge(3600L);
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
+    }
+```
+
+## 异常处理
+
+Spring Security中异常主要分为两大类：
+
+* AuthenticationException: 认证异常
+* AccessDeniedException: 授权异常
+
+**处理：**
+
+```java
+        //设置异常处理
+        http.exceptionHandling()
+                //处理认证异常
+                .authenticationEntryPoint((request, response, e) -> {
+                    response.setStatus(HttpStatus.UNAUTHORIZED.value());
+                    response.getWriter().write("尚未认证，请进行认证操作！");
+                })
+                //处理授权异常
+                .accessDeniedHandler((request, response, e) -> {
+                    response.setStatus(HttpStatus.FORBIDDEN.value());
+                    response.getWriter().write("无权访问！");
+                })
+;
+```
+
