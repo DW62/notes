@@ -716,6 +716,28 @@ HashSet是基于HashMap实现的，HashSet底层使用HashMap来保存所有元�
 
 综合来说：在需要频繁读取集合元素时，更推荐使用ArrayList，而在频繁插入和删除更推荐LinkedList。
 
+### 如何实现数组和LIst之间的转换
+
+数组转List：使用Arrays.asList(array)进行转换
+
+List转数组：使用List自带的toArray()方法
+
+### ArrayList和Vector的区别是什么？
+
+线程安全：Vector使用Synchronized来实现线程同步，是线程安全的，而ArrayList是非线程安全的。
+
+性能：ArrayList在性能方面要优于Vector
+
+扩容：ArrayList和Vector都会根据实际的需要动态调整容量，只不过在Vector扩容每次只会增加1倍而ArrayList只会增加50%
+
+### Array和ArrayList有何区别？
+
+Array可以存储基本数据类型和对象，ArrayList只能存储对象
+
+Array是指定固定大小的，而ArrayList大小是自动扩展的。
+
+Array内置方法没有ArrayList多，比如addAll、removerAll、iteration等方法只有ArrayList有
+
 ### Collection和Collections有什么区别？
 
 Collection是一个集合接口，它提供了对集合对象进行基本操作的通用接口方法，所以集合都是它的子类，比如List、set等
