@@ -1705,17 +1705,6 @@ public class MyUserDetailsService  implements UserDetailsService, UserDetailsPas
 
 ## 记住我
 
-### 基本使用
-
-中需要在配置中添加上
-
-```jav
-//设置记住我
-http.rememberMe();
-```
-
-就可以实现
-
 ### 原理分析
 
 当在SecurityConfig配置中开启 了“记住我"功能之后，在进行认证时如果勾选了“记住我"选项，此时打开浏览器控制台，分析整个登录过程。首先当我们登录时，在登录请求中多了一个RememberMe的参数。很显然，这个参数就是告诉服务器应该开启RememberMe功能的。如果自定义登录页面开启RememberMe功能应该多加入一个一样的请求参数就可以啦。该请求会被RememberMeAuthenticationFilter进行拦截然后自动登录具体参见源码:
@@ -1726,3 +1715,163 @@ http.rememberMe();
 
 ### 传统Web项目实现记住我
 
+在security配置类中添加
+
+```java
+ //设置是记住我
+http.rememberMe()
+       .rememberMeParameter("remember")//设置表单记住我单选框name
+		//.alwaysRemember(true)//是否总记住我
+;
+```
+
+然后根据配置修改登录页面
+
+```html
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>登录页面</title>
+</head>
+<body>
+    <h1>用户登录</h1>
+    <form method="post" th:action="@{/doLogin}">
+        用户名：<input name="uname" type="text"></br>
+        密  码：<input name="passwd" type="text"></br>
+        <!--记住我的值默认为true、yes、on、1都可以-->
+        <input type="checkbox" name="remember" value="true">记住我</br>
+        <input type="submit" value="登录">
+    </form>
+</body>
+</html>
+```
+
+此时再次访问登录页面，勾选上记住我单选框，就可以实现记住我操作。
+
+![image-20221021144920913](https://raw.githubusercontent.com/DW62/ImgStg/master/202210211449002.png)
+
+此时登录成功后就会在返回一个base64加密的cookie，安全性不高
+
+**增强安全性：**
+
+首先修改配置
+
+```java
+ //设置是记住我
+ http.rememberMe()
+        .rememberMeParameter("remember")//设置表单记住我单选框name
+         .rememberMeServices(rememberMeServices())//设置服务类型来增加安全性
+		// .alwaysRemember(true)//是否总记住我
+ ;
+```
+
+```java
+@Bean
+public RememberMeServices rememberMeServices(){
+      	//参数1：设置key
+        //参数2：设置数据源
+        //参数3：设置保存位置，可以基于内存 new InMemoryTokenRepositoryImpl()，也可以基于数据库new JdbcTokenRepositoryImpl()
+        return new 		       PersistentTokenBasedRememberMeServices(UUID.randomUUID().toString(),userDetailsService(),new InMemoryTokenRepositoryImpl());
+}
+```
+
+### 会话管理
+
+> 当浏览器调用登录接口登录成功后，服务端会和浏览器之间建立一个会话(Session)浏览器在每次发送请求时都会携带一个Sessionld，服务端则根据这个Sessionld来判断用户身份。当浏览器关闭后，服务端的Session并不会自动销毁，需要开发者手动在服务端调用Session销毁方法，或者等Session过期时间到了自动销毁。在Spring Security中，与HttpSession相关的功能SessionManagemenFiter和Session AutheaticationStrateey接口来处理，SessionManagomentFilter 过滤器将Session 相关操作委托给SessionAuthenticationStrategy接口去完成。
+
+### 会化的并发管理
+
+会话并发管理就是指在当前系统中，同一个用户可以同时创建多少个会话，如果一台设备对应一个会话，那么也可以简单理解为同一个用户可以同时在多少台设备上进行登录。默认情况下，同一用户在多少台设备上登录并没有限制，不过开发者可以在Spring Security中对此
+进行配置。
+
+实现会话管理
+
+```java
+ //设置会话管理
+http.sessionManagement()//开启会话管理
+       .maximumSessions(1)//设置同一账户最多登录个数
+       .maxSessionsPreventsLogin(true)//设置如果同一个账户登录过一次后就不会被挤掉
+                ;
+```
+
+```java
+//配置监听session
+@Bean
+public HttpSessionEventPublisher httpSessionEventPublisher(){
+    return new HttpSessionEventPublisher();
+}
+```
+
+1. sessionManagement() 用来开启会话管理、maximumSessions 指定会话的并发数。
+2. HttpSessionEventPublisher 提供一个HttpSessionEvenePubishor实例。SpringSecurity中通过一个Map集合来集护当前的HttpSession记录，进而实现会话的并发管理。当用户登录成功时，就向集合中添动加一条HttpSession记录;当会话销毁时，就从集合中移除一条Httpsession记录。HtpSesionEvenPublisher 实现了Fttp SessionListener接口，可以监听到HtpSessicn的创建和销毁事件,并将Fltp Session的创建/销毁事件发布出去，这样，当有HtpSession销毁时，Spring Security就可以感知到该事件了。
+
+### 会话失效处理
+
+**传统项目处理**
+
+只需要添加一个会话失效后的处理就可以
+
+```java
+//设置会话管理
+http.sessionManagement()//开启会话管理
+        .maximumSessions(1)//设置同一账户最多登录个数
+        .expiredUrl("/goLogin")//设置会话超时的处理
+        ;
+```
+
+此时会话失效时后，之间返回登录页面
+
+**前后端分离项目处理**
+
+```
+ //设置会话管理
+ http.sessionManagement()//开启会话管理
+                .maximumSessions(1)//设置同一账户最多登录个数
+                //设置会失效时的策略，用来在前后端分离项目中会话超时返回json
+                .expiredSessionStrategy(event -> {
+                    HttpServletResponse response=event.getResponse();
+                    response.setContentType("application/json;charset=UTF-8");
+                    Map<String, Object> result=new HashMap<>();
+                    result.put("status",500);
+                    result.put("msg","当前会话失效，请重新登录！");
+                    String s = new ObjectMapper().writeValueAsString(result);
+                    response.getWriter().println(s);
+                    response.flushBuffer();
+                })
+                ;
+```
+
+此时会话失效时后，之间返回json数据
+
+### 禁止重复登录
+
+只需要设置一个
+
+```java
+.maxSessionsPreventsLogin(true)//上面配置个数要想生效，必须添加该配置
+```
+
+有了该设置同一账号只允许登录一个
+
+### 会话共享
+
+前面的会话管理都是单机.上的会话管理，如果当前是集群环境，前面所讲的会话管理方案就会失效。此时可以利用spring session结合redis实现session共享。
+
+## CSRF
+
+简介：CSRF (Cross Site Request Forgery跨站请求伪造)，也可称为一键式攻击(one-click attack),通常缩写为CSRF或者XSRF 。CSRF攻击是一种挟持用户在当前已登录的浏览器上发送恶意请求的攻击方法。相对于XSS利用用户对指定网站的信任，CSRF则是利用网站对用户网页浏览器的信任。简单来说,CSRF是致击者通过一些技术手段欺骗用户的浏览器，去访问一个用户曾经认证过的网站并执行恶意请求，例如发送邮件、发消息、甚至财产操作(如转账和购买商品)。由于客户端(浏览器)已经在该网站上认证过，所以该网站会认为是真正用户在操作而执行请求(实际上这个并非用户的本意)。
+
+**CSRF防御**
+CSRF攻击的根源在于浏览器默认的身份验证机制(自动携带当前网站的Cookie信息)，这种机制虽然可以保证请求是来自用户的某个浏览器,但是无法确保这请求是用户授权发送。攻击者和用户发送的请求一模一样,这意味着我们没有办法去直接拒绝这里的某一个请求。如果能在合法清求中额外携带一个攻击者无法获取的参数，就可以成功区分出两种不同的请求,进而直接拒绝掉恶意请求。在SpringSecurity中就提供了这种机制来防御CSRF攻击，这种机制我们称之为`令牌同步模式`。
+
+**令牌同步模式**
+这是目前主流的CSRF攻击防御方案。具体的操作方式就是在每一个HTTP请求中，除了默认自动携带的Cookie参数之外，再提供一个安全的、随机生成的宇符串,我们称之为CSRF令牌。这个CSRF令牌由服务端生成,生成后在HtpSession中保存一份。当前端请求到达后，将请求携带的CSRF令牌信息和服务端中保存的令牌进行对比，如果两者不相等,则拒绝掉该HITTP请求。
+
+> 注意:考虑到会有一些外部站点链接到我们的网站，所以我们要求请求是幂等的，这样对子HEAD、OPTIONS、 TRACE 等方法就没有必要使用CSRF令牌了，强行使用可能会导致令牌泄露!
+
+### 传统开发使用CSRF
+
+只需要开启csrf就可以了。
+
+开启CSRF防御后会自动在提交的表单中加入如下代码，如果不能自动加入，需要在开启之后手动加入如下代码，并随着请求提交。获取服务端令牌方式如下:
