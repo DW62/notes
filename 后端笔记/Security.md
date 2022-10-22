@@ -2017,3 +2017,125 @@ Spring Security中异常主要分为两大类：
 ;
 ```
 
+## 授权
+
+Spring Security中提供的权限管理策略主要有两种类型：
+
+* 基于过滤器(URL)的权限管理(FilterSecurityInterceptor)主要是用来拦截HTTP请求，拦截下来之后，根据HTTP请求地址进行权限校验。
+* 基于AOP(方法)的权限管理(MethodSecurityInterceptor)主要是用来处理方法级别的权限问题。当需要调用某一个方法时，通过AOP将操作拦截下来，然后判断用户是否具备相关的权限。
+
+### 基于注解实现授权
+
+SpringSecurity提供了基于注解的权限控制方案，我们可以使用注解去指定访问对应的资源所需的权限。但是要使用它我们需要先开启相关配置。配置类中。
+
+```java
+@Configuration
+@EnableGlobalMethodSecurity(prePostEnabled = true,securedEnabled = true,jsr250Enabled = true)
+public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
+```
+
+* perPostEnabled：开启Spring Security提供的四个权限注解，@PostAuthorize.@PostFilter. @PreAuthorize 以及@PreFilter.
+* securedEnabled: 开启Spring Security提供的@Secured注解支持，该注解不支持权限表达式
+* jsr250Enabled: 开启JSR-250提供的注解，主要是@DenyAll、@PermitAll、 @RolesAll 同样这些注解也不支持权限表达式
+
+```text
+#以上注解含义如下:
+@PostAuthorize: 在目前标方法执行之后进行权限校验。
+@PostFiter: 在目标方法执行之后对方法的返回结果进行过滤。
+@PreAuthorize:在目标方法执行之前进行权限校验。
+@PreFiter: 在日标方法执行之前对方法参数进行过滤。
+@secured: 访问目标方法必须具各相应的角色。
+@DenyA1l:拒绝所有访问。
+@PermitAll:允许所有访问。
+@RolesAllowed:访问目标方法必须具备相应的角色。
+```
+
+这些基于方法的权限管理相关的注解，一般来说只要设置prePostEnabLed=true 就够用了。
+
+### 基于数据库实现动态权限管理
+
+首先需要5张数据表
+
+用户表  角色表  菜单表  用户角色关联表  菜单角色关联表  
+
+> 其中角色表中的表示角色的数据必须以`ROLE_`开头
+
+首先在实现根据数据库数据登录时，将用户的角色信息也放入认证对象中，使认证成功后的对象具有真实的数据中的角色信息。
+
+要实现基于数据的动态授权就先将之间配置的认证规则
+
+```java
+//配置认证规则
+ http.authorizeRequests()
+        .mvcMatchers("/goLogin").permitAll()//放行去登录页面请求
+        .mvcMatchers("/getVc").permitAll()//放行生成验证码请求
+        .anyRequest().authenticated();//所有请求都需要进行认证
+```
+
+替换为(之前的不要了)
+
+```java
+//获取工厂对象
+ApplicationContext applicationContext=http.getSharedObject(ApplicationContext.class);
+//配置动态认证规则
+//设置自定义的url权限处理
+http.apply(new UrlAuthorizationConfigurer<>(applicationContext))
+       .withObjectPostProcessor(new ObjectPostProcessor<FilterSecurityInterceptor>() {
+              @Override
+              public <O extends FilterSecurityInterceptor> O postProcess(O object) {
+                   //设置自定义动态授权处理类
+                   object.setSecurityMetadataSource(customerSecurityMetaSource);
+                   //设置是否拒绝公共资源的访问
+                   object.setRejectPublicInvocations(false);
+                   return object;
+              }
+       });
+```
+
+创建对应的自定义动态授权处理类
+
+```java
+/**
+ * 自定义动态授权处理类
+ */
+@Component
+public class CustomerSecurityMetaSource implements FilterInvocationSecurityMetadataSource {
+    //用来进行路径对比
+    AntPathMatcher antPathMatcher=new AntPathMatcher();
+    @Resource
+    private MenuInfoService menuInfoService;
+    /**
+     * 自定义动态资源权限元数据信息
+     */
+    @Override
+    public Collection<ConfigAttribute> getAttributes(Object object) throws IllegalArgumentException {
+        //获取请求接口的url
+        String requestURI = ((FilterInvocation) object).getRequest().getRequestURI();
+        //获取所有菜单信息
+        List<MenuInfo> allMenuInfo = menuInfoService.getAllMenuInfo();
+        for (MenuInfo menu:allMenuInfo) {
+            //判断是否和当前请求地址一致
+            if (antPathMatcher.match(menu.getMenuKey(),requestURI)){
+                //如果一致，获取该请求所需要的角色信息
+                List<String> roleKeyByMenuKey = menuInfoService.getRoleKeyByMenuKey(menu.getMenuKey());
+                String[] roles = roleKeyByMenuKey.toArray(new String[]{});
+                return SecurityConfig.createList(roles);
+            }
+        }
+        return null;
+    }
+
+    @Override
+    public Collection<ConfigAttribute> getAllConfigAttributes() {
+        return null;
+    }
+
+    //保持和默认返回一致
+    @Override
+    public boolean supports(Class<?> clazz) {
+        return FilterInvocation.class.isAssignableFrom(clazz);
+    }
+}
+```
+
+此时在菜单表中配置的菜单就需要有对应的角色才可以访问，菜单表中未配置的菜单就不要权限之间就可以访问。
