@@ -2139,3 +2139,128 @@ public class CustomerSecurityMetaSource implements FilterInvocationSecurityMetad
 ```
 
 此时在菜单表中配置的菜单就需要有对应的角色才可以访问，菜单表中未配置的菜单就不要权限之间就可以访问。
+
+## OAuth2
+
+OAuth是一个开放标准，该标准允许用户让第三方应用访问该用户在某一网站上存储的私密资源(如头像、照片、视频等)，并且在这个过程中无须将用户名和密码提供给第三方应用。通过令牌(token) 可以实现这一功能，每一个令牌授权一个特定的网站在特定的时段内允许可特定的资源。OAuth让用户可以授权第三方网站灵活访问它们存储在另外一些资源服务器上的特定信息，而非所有内容。对于用户而言，我们在互联网应用中最常见的OAuth 应用就是各种第三方登录，例如QQ授权登录、微信授权登录、微博授权登录、GitHub 授权登录等。
+
+例如用户想登录Ruby China, 传统方式是使用用户名密码但是这样并不安全，因为网站会存储你的用户名密码，这样可能会导致密码泄露。这种授权方式安全隐患很大，如果使用0Auth协议就能很好地解决这一问题。
+
+**0Auth2协议一共支持四种不同的授权模式：**
+
+1. 授权码模式：常见的第三方平台登录功能基本都是使用这种模式。
+2. 简化模式：简化模式是不需要第三方服务端参与，直接在浏览器中向授权服务器申请令牌(token) ,如果网站是纯静态页面,则可以采用这种方式。
+3. 密码模式：密码模式是用户把用户名/密码直接告诉客户端,客户端使用这些信息后授权服务器申请令牌(token) .这需要用户对客户端高度信任，例如客户端应用和服务提供商就是同一家公司。
+4. 客户端模式：客户端模式是指客户端使用自己的名义而不是用户的名义向服务提估者申请授权。严格来说，客户端模式并不能算作OAuth协议解决问题的一种解决方案，但是对于开发者而言,在一些为移动端提供的授权服务器上使用这种模式还是非常方便的。
+
+无论哪种授权模式，其授权流程都是相似的，只不过在个别步骤上有着差异而已。
+
+**授权码模式具体流程：**
+
+* (A)用户访问第三方应用，第三方应用通过浏览器导向认证服务器。
+* (B) 用户选择是否给予客户端授权。
+* (C) 假设用户给予授权，认证服务器将用户导向客户端事先指定的"重定向URI" (redirection URI) ，同时附上一个授权码。
+* (D) 客户端收到授权码，附上早先的"重定向URI",向认证服务器申请令牌。这-步是在客户端的后台的服务器上完成的，对用户不可见。
+* (E)认证服务器核对了授权码和重定向URI， 确认无误后，向客户端发送访问令牌(access token) 和更新令牌(refresh token) 。
+
+核心参数：
+
+| 字段          | 描述                                       |
+| ------------- | ------------------------------------------ |
+| client_ id    | 授权服务器注册应用后的唯一标识             |
+| response_type | 必须固定值在授权码中必须为 code            |
+| redirect_uri  | 必须通过客户端注册的重定向URL              |
+| scope         | 必须令牌可以访问资源权限read只读all读写    |
+| state         | 可选存在原样返回客户端用来防止CSRF跨站攻击 |
+
+### 0Auth2标准接口
+
+●/oauth/authorize: 授权端点
+●/oauth/token: 获取令牌端点
+●/oauth/confirm_ access:用户确认授权提交端点
+●/oauth/error: 授权服务错误信息端点
+●/oauth/ check_ token:用于资源服务访问的令牌解析端点
+●/oauth/token_ key: 提供公有密匙的端点，如果使用JWT令牌的话
+
+### 实现github的oauth2认证
+
+先创建一个SpringSecurity项目
+
+```xml
+    <!--spring-security的依赖-->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
+        <!--spring-boot的依赖-->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <!--使用oauth2授权的依赖-->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-oauth2-client</artifactId>
+        </dependency>
+```
+
+创建security配置类
+
+```java
+@Configuration
+public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
+    @Override
+    protected void configure(HttpSecurity http) throws Exception {
+        //设置授权
+        http.authorizeRequests()
+                .anyRequest().authenticated()//设置所以请求都需要进行认证
+                ;
+        //设置认证
+        http.formLogin();//设置表单认证
+        http.oauth2Login();//设置使用oauth认证
+    }
+}
+```
+
+设置github，使其添加上该创建项目的认证
+
+![image-20221023160929468](https://raw.githubusercontent.com/DW62/ImgStg/master/image-20221023160929468.png)
+
+填写信息
+
+![image-20221023161018491](https://raw.githubusercontent.com/DW62/ImgStg/master/image-20221023161018491.png)
+
+填写完成信息之后，提交申请，并生成密钥
+
+完善项目的配置文件
+
+```properties
+# 应用名称
+spring.application.name=Security-oauth-github
+# 应用端口
+server.port=8080
+# 设置github提供认证的ID
+spring.security.oauth2.client.registration.github.client-id=2208a1fc2a5faa525cf3
+# 设置github提供认证的密钥
+spring.security.oauth2.client.registration.github.client-secret=11e0e0cfd65c036d7bd27e07fa9f72da6fa53fba
+# 一定要于重定向回调URL一致,Security默认地址必须为/login/oauth2/code/k
+spring.security.oauth2.client.registration.github.redirect-uri=http://localhost:8080/login/oauth2/code/github
+```
+
+创建一个接口来获取认证成功后的用户信息
+
+```java
+@RestController
+public class TestController {
+    //获取使用oauth2授权后的用户信息，默认封装在DefaultOAuth2User中
+    @GetMapping("/hello")
+    public DefaultOAuth2User hello() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        return (DefaultOAuth2User) authentication.getPrincipal();
+    }
+}
+```
+
+此时运行项目
+
+![image-20221023161803153](https://raw.githubusercontent.com/DW62/ImgStg/master/image-20221023161803153.png)
