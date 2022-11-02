@@ -744,6 +744,58 @@ Collection是一个集合接口，它提供了对集合对象进行基本操作�
 
 Collections是一个包装类，它提供了很多静态方法，不能被实例化就像一个工具类，比如提供的排序方法：Collections.sort(list)。
 
+### 在Queue中poll()和remove()有什么区别？
+
+相同点：都是返回第一个元素，并在队列中删除返回对象/
+
+不同点：如果没有元素poll()会返回null，而remove()会直接抛出NoSuchElementException异常
+
+### 哪些集合是线程安全的
+
+Vector、Hashtable、Stack都是线程安全的，而像HashMap则是非线程安全的，不过JDK1.5之后随着java.utill.concurrent并发包的出现，他们也有了自己对应的线程安全类，比如HashMap对应的线程安全类就是ConcurrentHashMap。
+
+### 迭代器Iterator是什么？
+
+Iterator接口提供遍历任何Collention的接口。我们可以从一个Collection中使用迭代器的方法来获取迭代器实例。迭代器取代了Java集合框架中的Enumeration，迭代器允许调用者在迭代过程中移除元素。
+
+### Iterator怎么使用？有什么特点？
+
+**使用：**
+
+```java
+List list = new ArrayList<>();
+Iterator it =list.iterator();
+while(it.hasNext()){
+    String obj=it.next();
+    System.out.println(obj);
+}
+```
+
+Iterator的特点是更加安全，因为它可以保证，在当前遍历的集合元素被改变的时候，就会抛出ConcurrentModificationException异常。
+
+### Iterator和ListIterator有什么区别？
+
+Iterator可以遍历Set和List，而ListIterator只能遍历List
+
+Iterator只能单向遍历，而ListIterator可以双向遍历(向前/向后)
+
+ListIterator从Iterator接口继承，然后添加了一些额外的功能，比如添加一个元素，替换一个元素、获取前面或者后面元素的索引位置。
+
+### 怎么确保一个集合不能被修改？
+
+可以使用Collections.unmodifiableCollection(Collection c) 方法来创建一个只读的集合，这样改变集合的任何操作对会抛出Java.lang.UnsupportedOperationException异常
+
+```java
+//示例代码如下；
+List list=new ArrayList<>();
+list.add("X");
+Collection clist=Collections.unmodifableCollection(list);
+clist.add("y");//允许时报错
+System.out.println(l)
+```
+
+
+
 ### Java泛型是如何工作的？什么是类型擦除？
 
 泛型是通过类型擦除来实现的，编译器在编译时擦除了所以类型相关的学习，所以在运行时内存在任何类型相关的信息。例如List<String>在运行时仅用一个List来表示。这样做的目的，是确保和Java5之前的版本开发二进制类库进行兼容。你无法在运行是访问到类型参数，因为编译器已经把泛型类型转换为原始类型。

@@ -171,50 +171,42 @@ const { current, name } = storeToRefs(Test)
 
 ## pinia 数据持久化插件
 
-pinia 和 vuex 都有一个通病 页面刷新状态会丢失，我们可以写一个pinia 插件缓存他的值
+pinia 和 vuex 都有一个通病 页面刷新状态会丢失，我们可以在mian.tx中写一个pinia 插件缓存他的值
 
 ```typescript
-//定义key  值和变量名任意
-const __piniaKey = '__PINIAKEY__'
-
- //声明传人key的类型
-type Options = {
-   key?:string
+//pinina存储值的方法
+const setStorage = (key: string, value: any) => {
+    localStorage.setItem(key, JSON.stringify(value))
 }
-
-//将数据存在本地方法
-const setStorage = (key: string, value: any): void => {
-       localStorage.setItem(key, JSON.stringify(value))
-}
- 
 //存缓存中读取数据方法
 const getStorage = (key: string) => {
 	return (localStorage.getItem(key) ? JSON.parse(localStorage.getItem(key) as string) : {})
 }
- 
-//利用函数柯丽华接受用户入参
-const piniaPlugin = (options: Options) => {
- 		//将函数返回给pinia  让pinia  调用 注入 context
-		return (context: PiniaPluginContext) => {
-			const { store } = context;
-            	//获取存入的值
-			const data = getStorage(`${options?.key ?? __piniaKey}-${store.$id}`)
-            	//当值发生改变将就执行该方法
-			store.$subscribe(() => {
-					setStorage(`${options?.key ?? __piniaKey}-${store.$id}`, toRaw(store.$state));
-			})
- 			//返回值覆盖pinia 原始值
-			return {...data	} 
-		} 
-}）
- 
-//初始化pinia
-const pinia = createPinia()
- 
-//注册pinia 插件
-pinia.use(piniaPlugin({
-	key: "pinia"
-
+//设置参数类型
+type Options={
+    key?:string
+}
+//存储时默认的kye
+const _piniakey_='DW'
+//创建pinia插件函数
+const piniaPlugin = (options:Options) => {
+    return (context: PiniaPluginContext) => {
+        //获取数据
+        const { store } = context
+        const data=getStorage(`${options?.key ?? _piniakey_}-${store.$id}`)
+        //当pinina值发生变化就执行的方法
+        store.$subscribe(() => {
+            setStorage(`${options?.key ?? _piniakey_}-${store.$id}`, toRaw(store.$state));
+        })
+        //返回值覆盖pinia 原始值
+		return {...data	}  
+    }
+}
+//创建pinia对象
+const store = createPinia();
+//注册插件
+store.use(piniaPlugin({
+    key:"pinia"
 }))
 ```
 
