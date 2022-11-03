@@ -7,20 +7,20 @@
     <a-layout class="layout">
         <div class="layout-navbar">
             <!-- 顶部 -->
-            <NavBar />
+            <Head></Head>
         </div>
         <a-layout>
             <a-layout>
-                <a-layout-sider class="layout-sider" breakpoint="xl" :collapsible="true" :style="{ paddingTop: '60px' }"
-                    :hide-trigger="true">
+                <a-layout-sider class="layout-sider" :style="{ paddingTop: '60px',paddingLeft: '0px'}" breakpoint="lg"
+                    collapsible :collapsed="collapsed" @collapse="onCollapse">
                     <div class="menu-wrapper">
-                        侧边菜单
+                        <Menu></Menu>
                     </div>
                 </a-layout-sider>
-                <a-layout class="layout-content" :style="{ paddingTop:'60px',paddingLeft:'220px'}">
+                <a-layout class="layout-content" :style="contentPaddingStyle">
                     <a-layout-content>
                         <!-- 内容部分 -->
-                        <PageLayout />
+                        <Content />
                     </a-layout-content>
                     <!-- 底部 -->
                     <Footer></Footer>
@@ -29,16 +29,58 @@
         </a-layout>
     </a-layout>
 </template>
-<script lang="ts" setup>
-import NavBar from '@/components/navbar/index.vue';
-import Footer from '@/components/footer/index.vue';
-import PageLayout from './page-layout.vue';
+
+<script lang="ts">
+import { defineComponent, reactive, ref } from 'vue'
+//引入头部组件
+import Head from './components/head.vue';
+//引入底部组件
+import Footer from './components/footer.vue';
+//引入内容区组件
+import Content from './components/content.vue';
+//引入菜单组件
+import Menu from './components/menu.vue'
+export default defineComponent({
+    components: {
+        Head,
+        Footer,
+        Content,
+        Menu
+    },
+    setup() {
+        //定义内容区样式
+        const contentPaddingStyle=reactive({
+            paddingTop: '60px',
+            paddingLeft: '200px'
+        })
+        //定义菜单是否折叠
+        const collapsed = ref(false);
+        //点击菜单折叠按时时触发
+        const onCollapse = (val: boolean, type: string) => {
+            collapsed.value = val;
+            if(val){
+                //折叠时
+                contentPaddingStyle.paddingLeft='50px'
+            }else{
+                //展开时
+                contentPaddingStyle.paddingLeft='200px'
+            }
+        }
+        return {
+            collapsed,
+            onCollapse,
+            contentPaddingStyle
+        }
+    }
+})
 </script>
+
 <style scoped lang="scss">
 .layout {
     width: 100%;
     height: 100%;
 }
+
 .layout-navbar {
     position: fixed;
     top: 0;
@@ -47,6 +89,7 @@ import PageLayout from './page-layout.vue';
     width: 100%;
     height: 60px;
 }
+
 .layout-sider {
     position: fixed;
     top: 0;
@@ -70,36 +113,42 @@ import PageLayout from './page-layout.vue';
         overflow-y: hidden;
     }
 }
+
 .layout-sider ::after {
     position: absolute;
     top: 0;
     right: -1px;
     display: block;
-    width: 1px;
+    // width: 1px;
     height: 100%;
     background-color: var(--color-border);
     content: '';
 }
+
 .menu-wrapper {
     height: 100%;
     overflow: auto;
     overflow-x: hidden;
+
     :deep(.arco-menu) {
         ::-webkit-scrollbar {
             width: 12px;
             height: 4px;
         }
+
         ::-webkit-scrollbar-thumb {
             border: 4px solid transparent;
             background-clip: padding-box;
             border-radius: 7px;
             background-color: var(--color-text-4);
         }
+
         ::-webkit-scrollbar-thumb:hover {
             background-color: var(--color-text-3);
         }
     }
 }
+
 .layout-content {
     min-height: 100vh;
     overflow-y: hidden;
@@ -172,6 +221,61 @@ import PageLayout from './page-layout.vue';
     background: wheat;
     margin: 10px auto;
   }
+</style>
+```
+
+菜单组件
+
+```vue
+<!-- 菜单组件 -->
+<template>
+    <div class="menu-demo">
+        <a-menu :style="{ width: '100%', height: '100%' }">
+            <a-sub-menu key="0">
+                <template #icon>
+                    <icon-apps></icon-apps>
+                </template>
+                <template #title>Navigation 1</template>
+                <a-menu-item key="0_0">Menu 1</a-menu-item>
+                <a-menu-item key="0_1">Menu 2</a-menu-item>
+            </a-sub-menu>
+        </a-menu>
+    </div>
+</template>
+
+<script lang="ts">
+import { defineComponent } from 'vue'
+import {
+    IconMenuFold,
+    IconMenuUnfold,
+    IconApps,
+    IconBug,
+    IconBulb,
+} from '@arco-design/web-vue/es/icon';
+
+export default defineComponent({
+    components: {
+        IconMenuFold,
+        IconMenuUnfold,
+        IconApps,
+        IconBug,
+        IconBulb,
+    },
+    setup() {
+        return {
+            
+        }
+    }
+})
+</script>
+
+<style scoped>
+.menu-demo {
+    box-sizing: border-box;
+    width: 100%;
+    height:100% ;
+    background-color: var(--color-neutral-2);
+}
 </style>
 ```
 
