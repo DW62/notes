@@ -59,10 +59,7 @@ export default instance
 
 ```typescript
 //封装axios请求
-//导入axios配置
-import axios from 'axios'
 import instance from '../config/axiosConfig'
-
 //定义一个configType类型
 type configType = {
     method: string
@@ -79,7 +76,6 @@ const http = {
         if (params) config.params = params
         return instance(config)
     },
-    //后端通过@RequestBody将值封装到对象中获取值
     post(url: string, params?: any) {
         const config: configType = {
             method: 'post',
@@ -87,17 +83,6 @@ const http = {
         }
         if (params) config.data = params
         return instance(config)
-    },
-    // 后端可以通过@RequestParam("")来获取值
-    postFrom(url: string, params?: any) {
-        return axios({
-            method: 'post',
-            url: url,
-            headers: {
-                'content-type': 'multipart/form-data'
-            },
-            data: params
-        })
     },
     put(url: string, params: any) {
         const config: configType = {
@@ -129,6 +114,14 @@ import http from '../util/httpUtil'
 export function getTest(params:any){
     return http.get('/api/image/getImageById',params)
 }
+```
+
+> 后台需要表单提交时可以通过 FoemDate() 将数据封装起来，如何在使用post方法来执行。
+
+```ts
+let formData = new FormData();
+formData.append('username', loginform.emali);
+formData.append('password', loginform.password);
 ```
 
 ### 在页面进入方法
