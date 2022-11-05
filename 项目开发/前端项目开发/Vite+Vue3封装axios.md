@@ -116,7 +116,7 @@ export function getTest(params:any){
 }
 ```
 
-> 后台需要表单提交时可以通过 FoemDate() 将数据封装起来，如何在使用post方法来执行。
+> 后台需要表单提交时可以通过 FoemDate() 将数据封装起来，然后在使用post方法来执行。
 
 ```ts
 let formData = new FormData();
