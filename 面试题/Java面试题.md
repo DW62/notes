@@ -267,7 +267,6 @@ System.out.println(s1.equals(s2)); // true  String重写equals比较的是值
 
 * `String`类被`final`进行修饰，不能被继承。
 * 在用`+`号链接字符串的时候会创建新的字符串。
-* `String s=new String("Hello World")`可以创建两个对象也可以创建一个对象，如果静态区有`“Hello World ”`字符串常量对象的话，仅仅在堆中创建一个对象。如果静态区没有`"Hello World" `对象，则在堆和静态区中都要创建对象。
 * 在Java中，通过使用`“+”` 符号来串联字符串的时候，实际上底层会转换为`StringBuilder`实例的`append()`方法来实现。
 
 ### `String s="XYZ"` 和`String s=new String("XYZ")`的区别？
@@ -293,7 +292,7 @@ System.out.println(s1.equals(s2)); // true  String重写equals比较的是值
 > try-catch-finally
 
 * 无论是否出现异常，finally块中的代码都会执行。
-* 当try和catch中有return时，finally仍然会执行，无论try里面执行了return语言，break语句、还是continue语句，finally语句块还会继续执行，但是如果执行try和catch时JVM退出(比如System.exit(0))，那么finally不会被执行。
+* 除非执行try和catch时JVM退出(比如System.exit(0))，那么finally不会被执行，否则都会执行。
 * finally是在return后面的表达式运算后执行的(此时并没有返回运算后的值，而是先把要返回的值保存起来，然后执行finally中的代码，此时不管finally中的代码怎样运算，返回值都不会改变，依然是之前保存的值)
 * 当try和finally里面都有return时，会忽略try的return，而使用finally的return。
 * 如果try代码块中的代码抛出异常，执行finally时又抛出异常，此时原始异常信息丢失，只抛出finally代码块中的异常。
@@ -506,7 +505,7 @@ char类型变量是用来存储Unicode编码的字符串.Unicode编码字符集�
 ### abstract
 
 * 只要含有抽象方法，这个类必须添加abstract关键字，定义为抽象类。
-* 只要父类是抽象类，内含抽象方法，那么继承这个类的子类的相应方法必须重写。如果不重写，就需要把父类的声明抽象方法再重写一遍，留给这个子类的子类去实现。同时将这个子类也定义为抽象类。
+* i只要父类是抽象类，内含抽象方法，那么继承这个类的子类的相应方法必须重写。如果不重写，就需要把父类的声明抽象方法再重写一遍，留给这个子类的子类去实现。同时将这个子类也定义为抽象类。
 * 抽象类中可以有抽象方法，也可以有具体实现方法
 * 抽象方法必须加上abstract关键字，而具体方法不可以加
 * 只要是抽象类就不能new一个这个类的对象。
@@ -535,21 +534,21 @@ char类型变量是用来存储Unicode编码的字符串.Unicode编码字符集�
 
 ### 接口和抽象类有什么区别？
 
-默认方法实现：抽象类可以有默认方法实现，接口不能有默认方法实现。
-
-方法：抽象类可以包含非抽象的普通方法，而接口中所有的方法必须是抽象的，不能有非抽象的普通方法。抽象类可以包含静态方法，接口不能包含静态方法。
+main方法：抽象类可以有main方法并且能够运行它，接口不能有main方法。
 
 成员变量：抽象类中可以有普通成员变量，接口中不能有普通成员变量。抽象类和接口都可以包含静态成员变量，抽象类中的静态成员变量的访问类型可以任意，但是接口中变量只能是public static类型，并且默认为public static final类型
 
-实现：抽象类的子类使用extends来继承，接口必须使用implements来实现接口。
-
 构造方法：抽象类可以有构造函数，接口不能有。
 
-main方法：抽象类可以有main方法并且能够运行它，接口不能有main方法。
+默认方法实现：抽象类可以有默认方法实现，接口不能有默认方法实现。
+
+方法访问修饰符：抽象类中的方法可以是任意访问修饰符，接口中的方法默认使用public修饰
+
+方法：抽象类可以包含非抽象的普通方法，而接口中所有的方法必须是抽象的，不能有非抽象的普通方法。抽象类可以包含静态方法，接口不能包含静态方法。
+
+实现：抽象类的子类使用extends来继承，接口必须使用implements来实现接口。
 
 实现数量：类可以实现很多给接口，但是只能继承一个抽象类。
-
-访问修饰符：抽象类中的方法可以是任意访问修饰符，接口中的方法默认使用public修饰
 
 Java8中接口中会有default方法，即可以被实现的方法
 
@@ -666,130 +665,6 @@ Files.write()：写入文件
 
 ​			无论是否抛出异常，finally代码块都会执行，它主要是用来释放应用占用的资源。finalize()方法是Object类的一个protected方法，它是在对象被垃圾回收之前由Java虚拟机来调用的。、
 
-### Java集合容器有哪些？
-
-![img](https://img-blog.csdnimg.cn/20190727183756962.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3FxXzM1NzcxMjY2,size_16,color_FFFFFF,t_70)
-
-> list 元素是有序的，可重复的；set元素是无序的，不可重复的。
-
-### List、Set、Map之间的区别是什么？
-
-List、Set、Map的主要区别体现在：元素是否有序、是否允许重复。
-
-1. List集合中对象按照索引位置进行排序，可以有重复对象，允许按照对象在集合中的索引位置检索对象，例如通过list.git(i)方法来获取集合中的元素；
-2. Map中每一个元素包含一个键和一个值，成对出现，键对象不可重复，值对象可以重复。
-3. Set集合中的对象不按照特定的方法进行排序，并且没有重复对象，但它的实现类能对集合中的对象按照特定的方法排序，例如Tree Set类，可以按照默认顺序，也可以通过实现Java.util.Comparator< Type >接口来自定义排序方式。 
-
-### HashMap和Hashtable有什么区别？
-
-存储：HashMap允许一个key和多个不同的key对应的value为null，而hashtable不允许key或者value为空。
-
-线程安全：Hashtable是线程安全的，而HashMap是非线程安全的。
-
-推荐使用：在Hashtable的类注释可以看到，Hashtable是保留类不建议使用，推荐在单线程环境下使用HashMap替代，如果需要多线程使用则用ConcurrentHashMap
-
-### 如何决定使用HashMap还是TreeMap
-
-对于在Map中插入、删除、定位一个元素这类操作，HashMap是最好的选择，因为相对而言HashMap的插入会更快，但是如果对一个key集合进行有序遍历，那么TreeMap是更好的选择。
-
-### 说一下HashMap的实现原理
-
-HashMap基于Hash算法实现的，我们通过put(key，value)存储，get(key)来获取。当传入key时，hashMap会根据key.hashCode()计算出hash值，根据hash值将value保存在bucket里。当计算出hash值相同时，我们称之为hash冲突，hashMap的做法是用链表和红黑树存储相同hash值的value。当hash冲突的个数比较少时，使用链表否则使用红黑树。
-
-### 说一下HashSet实现原理
-
-HashSet是基于HashMap实现的，HashSet底层使用HashMap来保存所有元素，因此HashSet的实现比较简单，相关HashSet的操作，基本上都是直接调用底层HashMap的相关方法来完成，HashSet不允许重复的值。
-
-### ArrayList和LinkedList的区别是什么
-
-数据解构实现：ArrayList是动态数组的数据结构实现，而Linked List是双链表的数据结构实现。
-
-数据访问效率：Array List比LinkedList在随机访问时效率高，因为linkedList是线性的数据存储，所以需要移动指针从前向后以此查找。
-
-增加和删除效率：在非首尾的增加和删除操作，LinkedList要比ArrayList效率高，因为ArrayList增删操作要影响数组内其他数据的下标。
-
-综合来说：在需要频繁读取集合元素时，更推荐使用ArrayList，而在频繁插入和删除更推荐LinkedList。
-
-### 如何实现数组和LIst之间的转换
-
-数组转List：使用Arrays.asList(array)进行转换
-
-List转数组：使用List自带的toArray()方法
-
-### ArrayList和Vector的区别是什么？
-
-线程安全：Vector使用Synchronized来实现线程同步，是线程安全的，而ArrayList是非线程安全的。
-
-性能：ArrayList在性能方面要优于Vector
-
-扩容：ArrayList和Vector都会根据实际的需要动态调整容量，只不过在Vector扩容每次只会增加1倍而ArrayList只会增加50%
-
-### Array和ArrayList有何区别？
-
-Array可以存储基本数据类型和对象，ArrayList只能存储对象
-
-Array是指定固定大小的，而ArrayList大小是自动扩展的。
-
-Array内置方法没有ArrayList多，比如addAll、removerAll、iteration等方法只有ArrayList有
-
-### Collection和Collections有什么区别？
-
-Collection是一个集合接口，它提供了对集合对象进行基本操作的通用接口方法，所以集合都是它的子类，比如List、set等
-
-Collections是一个包装类，它提供了很多静态方法，不能被实例化就像一个工具类，比如提供的排序方法：Collections.sort(list)。
-
-### 在Queue中poll()和remove()有什么区别？
-
-相同点：都是返回第一个元素，并在队列中删除返回对象/
-
-不同点：如果没有元素poll()会返回null，而remove()会直接抛出NoSuchElementException异常
-
-### 哪些集合是线程安全的
-
-Vector、Hashtable、Stack都是线程安全的，而像HashMap则是非线程安全的，不过JDK1.5之后随着java.utill.concurrent并发包的出现，他们也有了自己对应的线程安全类，比如HashMap对应的线程安全类就是ConcurrentHashMap。
-
-### 迭代器Iterator是什么？
-
-Iterator接口提供遍历任何Collention的接口。我们可以从一个Collection中使用迭代器的方法来获取迭代器实例。迭代器取代了Java集合框架中的Enumeration，迭代器允许调用者在迭代过程中移除元素。
-
-### Iterator怎么使用？有什么特点？
-
-**使用：**
-
-```java
-List list = new ArrayList<>();
-Iterator it =list.iterator();
-while(it.hasNext()){
-    String obj=it.next();
-    System.out.println(obj);
-}
-```
-
-Iterator的特点是更加安全，因为它可以保证，在当前遍历的集合元素被改变的时候，就会抛出ConcurrentModificationException异常。
-
-### Iterator和ListIterator有什么区别？
-
-Iterator可以遍历Set和List，而ListIterator只能遍历List
-
-Iterator只能单向遍历，而ListIterator可以双向遍历(向前/向后)
-
-ListIterator从Iterator接口继承，然后添加了一些额外的功能，比如添加一个元素，替换一个元素、获取前面或者后面元素的索引位置。
-
-### 怎么确保一个集合不能被修改？
-
-可以使用Collections.unmodifiableCollection(Collection c) 方法来创建一个只读的集合，这样改变集合的任何操作对会抛出Java.lang.UnsupportedOperationException异常
-
-```java
-//示例代码如下；
-List list=new ArrayList<>();
-list.add("X");
-Collection clist=Collections.unmodifableCollection(list);
-clist.add("y");//允许时报错
-System.out.println(l)
-```
-
-
-
 ### Java泛型是如何工作的？什么是类型擦除？
 
 泛型是通过类型擦除来实现的，编译器在编译时擦除了所以类型相关的学习，所以在运行时内存在任何类型相关的信息。例如List<String>在运行时仅用一个List来表示。这样做的目的，是确保和Java5之前的版本开发二进制类库进行兼容。你无法在运行是访问到类型参数，因为编译器已经把泛型类型转换为原始类型。
@@ -812,7 +687,7 @@ Array事实上并不支持泛型。
 
 ### JDK序列化
 
-> 序列化（Serizalizable）：将实现了Serializable接口的对象转换成一个字节数字，并可以将改字节数组转换为原来的对象。
+> 序列化（Serizalizable）：将实现了Serializable接口的对象转换成一个字节数组，并可以将该字节数组转换为原来的对象。
 
 ObjectOutPutStream是专门用来输出对象的输出流
 
@@ -909,5 +784,4 @@ Exception是程序本身出现可以处理的异常，这种异常分两大类�
 * 非RuntimeException也称CheckedException受检异常
 * 前者可以不必进行try-catch，后者必须进行try-catch或throw
 
-### 
 
