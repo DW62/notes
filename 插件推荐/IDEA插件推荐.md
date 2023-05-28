@@ -104,17 +104,29 @@ IDEA的自动补全功能已经很强大了，但是这个插件的自动补全�
 
 **插件下载地址：**https://plugins.jetbrains.com/plugin/7654-gsonformat
 
-## JavaDoc
+## Easy Javadoc
 
 **这是一个快速生成文档注释的插件**
 
-**插件下载地址：**https://plugins.jetbrains.com/plugin/7157-javadoc
+安装后，选中方法名，按快捷键ctrl+\，可以直接生成方法注释，同时，进行翻译，效果如下：
 
-windows上可以通过`alt + insert` 快捷键，mac是`control+回车`
+```java
+    /**
+     * 登录
+     *
+     * @param username 用户名
+     * @param password 密码
+     * @return {@link Result}
+     */
+    @PostMapping("/adminLogin")
+    public Result login(String username,String password){
+        return loginService.adminLogin(username,password);
+    }
+```
 
-可以快速生成注释模板
+选中类名，按ctrl+shift+\，则会弹出如下窗口，也就是说，可以一次性生成整个类的注释
 
-![图片](https://mmbiz.qpic.cn/sz_mmbiz_gif/6D5fS3V8mLxBOLNLnHEVtG2Q3pMLNTVYPueuPlb0wXmsZbj92KaQGjTPMIL3yKR4hWgWmMaia4eoaFo7P8aYlVg/640?wx_fmt=gif&tp=webp&wxfrom=5&wx_lazy=1&wx_co=1)
+> 在我们是双击选中之后，再按快捷键，这时候，会弹出一个翻译窗口
 
 ## ignore
 
@@ -195,3 +207,11 @@ windows上可以通过`alt + insert` 快捷键，mac是`control+回车`
 安装完后后选中方法右键选中插件就可以生成方法的时序图
 
 ![image-20220901140603904](https://raw.githubusercontent.com/DW62/ImgStg/master/202209011406943.png)
+
+## JUnitGenerator V2.0
+
+该插件从右键单击“Generate...”菜单生成 [JUnit](https://so.csdn.net/so/search?q=JUnit&spm=1001.2101.3001.7020) 测试，同时专注于 Java 类。可以使用提供的速度模板自定义单元测试输出代码，以根据原始类格式化代码。
+
+离线插件下载地址：https://plugins.jetbrains.com/plugin/3064-junitgenerator-v2-0
+
+按快捷键Alt+Insert，选择"Junit"，选择生成Junit3或Junit4 就会生成对应的测试
