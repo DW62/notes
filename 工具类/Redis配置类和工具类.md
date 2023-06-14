@@ -61,8 +61,13 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * Redis工具类
+ * @author DW
+ * @date 2023/05/30
+ */
 @Component
-public final class RedisUtil {
+public  class RedisUtil {
 
     /**
      *     注入配置类中自定义的RedisTemplate
@@ -172,6 +177,27 @@ public final class RedisUtil {
         }
     }
 
+    /**
+     * 普通缓存放入并设置时间
+     * @param key      键
+     * @param value    值
+     * @param time     时间(秒) time要大于0 如果time小于等于0 将设置无限期
+     * @param timeUnit 时间单位
+     * @return true成功 false 失败
+     */
+    public boolean set(String key, Object value, long time,TimeUnit timeUnit) {
+        try {
+            if (time > 0) {
+                redisTemplate.opsForValue().set(key, value, time, timeUnit);
+            } else {
+                set(key, value);
+            }
+            return true;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
     /**
      * 递增
      * @param key   键
@@ -379,8 +405,9 @@ public final class RedisUtil {
     public long sSetAndTime(String key, long time, Object... values) {
         try {
             Long count = redisTemplate.opsForSet().add(key, values);
-            if (time > 0)
+            if (time > 0) {
                 expire(key, time);
+            }
             return count;
         } catch (Exception e) {
             e.printStackTrace();
@@ -483,8 +510,9 @@ public final class RedisUtil {
     public boolean lSet(String key, Object value, long time) {
         try {
             redisTemplate.opsForList().rightPush(key, value);
-            if (time > 0)
+            if (time > 0) {
                 expire(key, time);
+            }
             return true;
         } catch (Exception e) {
             e.printStackTrace();
@@ -518,8 +546,9 @@ public final class RedisUtil {
     public boolean lSet(String key, List<Object> value, long time) {
         try {
             redisTemplate.opsForList().rightPushAll(key, value);
-            if (time > 0)
+            if (time > 0) {
                 expire(key, time);
+            }
             return true;
         } catch (Exception e) {
             e.printStackTrace();
@@ -559,6 +588,25 @@ public final class RedisUtil {
             e.printStackTrace();
             return 0;
         }
+    }
+    /**
+     * 获得缓存的基本对象key列表
+     * @param pattern 字符串前缀
+     * @return 对象列表
+     */
+    public Collection<String> keys(final String pattern)
+    {
+        return redisTemplate.keys(pattern);
+    }
+
+    /**
+     * 删除集合对象
+     * @param collection 多个对象
+     * @return
+     */
+    public boolean deleteObject(final Collection collection)
+    {
+        return redisTemplate.delete(collection) > 0;
     }
 }
 ```
