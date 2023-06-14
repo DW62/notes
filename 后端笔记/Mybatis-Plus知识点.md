@@ -324,6 +324,40 @@ public void testSelectMapsPage() {
 }
 ```
 
+### 多条件分页查询
+
+```java
+public Result selectConfigList(ConfigListSearchBody configListSearchBody) {
+    //分页对象  参数1：当前页码，参数2：每一页显示条数
+        Page<SysConfig> page=new Page<>(configListSearchBody.getCurrent(),configListSearchBody.getPageSize());
+        //定义查询条件
+        QueryWrapper<SysConfig> queryWrapper=new QueryWrapper<>();
+        //判断传入查询条件是否为空
+        if (StringUtils.isNotEmpty(configListSearchBody.getConfigName())){
+            queryWrapper.like("config_name",configListSearchBody.getConfigName());
+        }
+       
+        if (StringUtils.isNotNull(configListSearchBody.getBeginTime())){
+            queryWrapper.ge("create_time",configListSearchBody.getBeginTime());
+        }
+        if (StringUtils.isNotNull(configListSearchBody.getEndTime())){
+            queryWrapper.le("create_time",configListSearchBody.getEndTime());
+        }
+        if (StringUtils.isNotEmpty(configListSearchBody.getConfigType())){
+            queryWrapper.eq("config_typ",configListSearchBody.getConfigType());
+        }
+    //排序
+        queryWrapper.orderByDesc("create_time");
+    //进行c
+        Page<SysConfig> configPage=sysConfigMapper.selectPage(page,queryWrapper);
+        //数据列表
+        List<SysConfig> list = configPage.getRecords();
+        //总记录数
+        long total = configPage.getTotal();
+        return Result.success().data("list",list).data("total",total);
+    }
+```
+
 ## 删除与逻辑删除
 
 ### 根据id删除
