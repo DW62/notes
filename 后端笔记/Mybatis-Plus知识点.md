@@ -514,3 +514,130 @@ public void testSelectListOrderBy() {
 }
 ```
 
+## 代码生成器
+
+依赖
+
+```xml
+<!--MyBatis-Plus代码生成器依赖-->
+<dependency>
+   <groupId>com.baomidou</groupId>
+   <artifactId>mybatis-plus-generator</artifactId>
+   <version>3.4.1</version>
+</dependency>
+<!--MyBatis-Plus模板引擎 依赖-->
+<dependency>
+    <groupId>org.apache.velocity</groupId>
+    <artifactId>velocity-engine-core</artifactId>
+    <version>2.2</version>
+</dependency>        
+```
+
+生成器代码
+
+```java
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.core.exceptions.MybatisPlusException;
+import com.baomidou.mybatisplus.core.toolkit.StringUtils;
+import com.baomidou.mybatisplus.generator.AutoGenerator;
+import com.baomidou.mybatisplus.generator.config.DataSourceConfig;
+import com.baomidou.mybatisplus.generator.config.GlobalConfig;
+import com.baomidou.mybatisplus.generator.config.PackageConfig;
+import com.baomidou.mybatisplus.generator.config.StrategyConfig;
+import com.baomidou.mybatisplus.generator.config.rules.DateType;
+import com.baomidou.mybatisplus.generator.config.rules.NamingStrategy;
+import java.util.Scanner;
+
+/**
+ * myBatisPlus代码生成器类
+ */
+public class MybatisPlusGenerator {
+    /**
+     * 读取控制台内容
+     * @param tip
+     * @return
+     */
+    public static String scanner(String tip){
+        Scanner scanner=new Scanner(System.in);
+        StringBuilder help=new StringBuilder();
+        help.append("请输入"+tip+":");
+        System.out.println(help.toString());
+        if(scanner.hasNext()){
+            String ipt=scanner.next();
+            if(StringUtils.isNotBlank(ipt)){
+                return ipt;
+            }
+        }
+        throw new MybatisPlusException("请输入正确的"+tip+"!");
+    }
+
+    public static void main(String[] args) {
+        AutoGenerator mpg = new AutoGenerator();
+        //1、全局配置
+        GlobalConfig gc = new GlobalConfig();
+        //获取项目根目录
+        String projectPath = System.getProperty("user.dir");
+        //生成路径(一般都是生成在此项目的src/main/java下面)
+        gc.setOutputDir(projectPath + "/src/main/java");
+        //设置作者
+        gc.setAuthor("DW");
+        //是否自动生成之后打开资源管理器
+        gc.setOpen(false);
+        gc.setFileOverride(true); //第二次生成会把第一次生成的覆盖掉
+        gc.setServiceName("%sService"); //生成的service接口名字首字母是否为I，这样设置就没有
+        gc.setIdType(IdType.AUTO);
+        //设置data的类型只用java.util.data代替
+        gc.setDateType(DateType.ONLY_DATE);
+        //设置实体属性 swagger2
+//        gc.setSwagger2(true);
+        //生成resultMap
+        //gc.setBaseResultMap(true);
+        mpg.setGlobalConfig(gc);
+
+        //2、数据源配置
+        DataSourceConfig dsc = new DataSourceConfig();
+        dsc.setUrl("jdbc:mysql://localhost:3306/oa?serverTimezone=UTC&useUnicode=true&characterEncoding=utf8&useSSL=false");
+        dsc.setDriverName("com.mysql.cj.jdbc.Driver");
+        dsc.setUsername("root");
+        dsc.setPassword("root");
+        mpg.setDataSource(dsc);
+
+        // 3、包配置
+        PackageConfig pc = new PackageConfig();
+        //pc.setModuleName(scanner("模块名"));
+        pc.setParent("com.dw.oaApi");//配置包名
+        pc.setController("controller");//配置Controller
+        pc.setService("service");//配置service
+        pc.setServiceImpl("service.impl");//配置service.impl
+        pc.setMapper("mapper");
+        pc.setEntity("domain");
+        mpg.setPackageInfo(pc);
+
+        // 4、策略配置
+        StrategyConfig strategy = new StrategyConfig();
+        //驼峰命名
+        strategy.setNaming(NamingStrategy.underline_to_camel);
+        strategy.setColumnNaming(NamingStrategy.underline_to_camel);
+        //strategy.setSuperEntityClass("你自己的父类实体，没有就不用配置");
+        //strategy.setSuperControllerClass("com.lcy.demo.sys.controller.BaseController");
+        // strategy.setTablePrefix("t_"); // 表名前缀
+        strategy.setEntityLombokModel(true); //使用lombok
+        strategy.setRestControllerStyle(true);
+        //公共父类
+        //strategy.setSuperControllerClass("你自己的父类控制器没有就不用设置");
+        //写在公共父类中的字段
+        //strategy.setSuperEntityColumns("id");
+        // 逆向工程使用的表   如果要生成多个,这里可以传入String[]
+        strategy.setInclude(scanner("表名，多个英文逗号分割").split(","));
+        //驼峰转链接符
+        strategy.setControllerMappingHyphenStyle(true);
+        strategy.setTablePrefix(pc.getModuleName()+"tb_");
+
+        mpg.setStrategy(strategy);
+
+        //5、执行
+        mpg.execute();
+    }
+}
+```
+
